@@ -1,0 +1,224 @@
+:root {
+  --bg-1: #0a0e2a;
+  --bg-2: #1a2050;
+  --text: #f0f2ff;
+  --soft: rgba(255, 255, 255, 0.13);
+  --panel: rgba(10, 14, 42, 0.52);
+  --accent: #ff6fb6;
+  --accent-2: #ffd166;
+  --good: #7ef0b5;
+  --neon: #c084fc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-family: "Segoe UI", Inter, Arial, Helvetica, sans-serif;
+  background: radial-gradient(ellipse at 50% 10%, #3b1f6a 0%, #18224f 40%, #070c1f 100%);
+  color: var(--text);
+}
+
+body {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#scene {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#ui-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ─── Glassmorphism ─── */
+.glass {
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 24px 64px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* ─── HUD ─── */
+.hud {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  width: min(380px, calc(100vw - 36px));
+  border-radius: 22px;
+  padding: 16px 18px 14px;
+}
+
+.hud-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  margin-bottom: 14px;
+  background: linear-gradient(90deg, #ff8bd0, #ffd166, #7ef0b5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hud-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+}
+
+.hud-stat {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  opacity: 0.94;
+}
+
+.hud-icon {
+  font-size: 15px;
+}
+
+.hud-val {
+  font-weight: 700;
+  color: var(--accent-2);
+  margin-left: auto;
+}
+
+.energy-bar {
+  width: 100%;
+  height: 10px;
+  margin-top: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.energy-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff6fb6, #ffd166, #7ef0b5);
+  transition: width 150ms ease;
+  box-shadow: 0 0 8px rgba(255, 111, 182, 0.7);
+}
+
+/* ─── Bottom message ─── */
+.bottom-message {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  min-height: 52px;
+  border-radius: 18px;
+  padding: 14px 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+/* ─── Menu overlay ─── */
+.menu-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at 50% 40%, rgba(80, 20, 140, 0.45) 0%, rgba(5, 10, 28, 0.6) 100%);
+  pointer-events: auto;
+}
+
+.menu-card {
+  width: min(640px, calc(100vw - 40px));
+  padding: 36px 38px 32px;
+  border-radius: 28px;
+  text-align: center;
+  animation: fadeScaleIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+@keyframes fadeScaleIn {
+  from { opacity: 0; transform: scale(0.88) translateY(20px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.menu-logo {
+  font-size: 72px;
+  line-height: 1;
+  margin-bottom: 14px;
+  filter: drop-shadow(0 0 24px rgba(255, 150, 200, 0.8));
+  animation: pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.menu-card h1 {
+  margin: 0 0 8px;
+  font-size: clamp(30px, 5.5vw, 58px);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -1px;
+}
+
+.menu-card h1 span {
+  background: linear-gradient(90deg, #ff8bd0, #ffd166);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.menu-card p {
+  margin: 0 0 28px;
+  font-size: 16px;
+  opacity: 0.85;
+  line-height: 1.6;
+}
+
+.menu-card button {
+  position: relative;
+  appearance: none;
+  border: 0;
+  border-radius: 18px;
+  padding: 16px 36px;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  color: white;
+  background: linear-gradient(135deg, #d63fc9, #ff6fb6, #ff9f43);
+  box-shadow: 0 10px 36px rgba(214, 63, 201, 0.42), 0 0 0 1px rgba(255,255,255,0.12);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  letter-spacing: 0.2px;
+  overflow: hidden;
+}
+
+.menu-card button:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 16px 48px rgba(214, 63, 201, 0.56), 0 0 0 1px rgba(255,255,255,0.18);
+}
+
+.menu-card button:active {
+  transform: scale(0.97);
+}
+
+.btn-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.25), transparent 70%);
+  pointer-events: none;
+}
