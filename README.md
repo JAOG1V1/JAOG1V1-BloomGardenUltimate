@@ -16,7 +16,22 @@ Bloom Garden Ultimate é uma experiência web interativa onde você cultiva um j
 
 ---
 
-## 🚀 Instalação e execução local
+## 🚀 Como abrir sem VS Code
+
+Você **não precisa** do VS Code para jogar! Siga uma das opções abaixo:
+
+### ▶️ Opção 1 — Script de início rápido (recomendado)
+
+1. Instale o **[Node.js LTS](https://nodejs.org/)** caso ainda não tenha
+2. Execute o script de início:
+   - **Windows:** dê dois cliques no arquivo **`start.bat`**
+   - **Mac/Linux:** abra o terminal na pasta do projeto e execute:
+     ```bash
+     bash start.sh
+     ```
+3. Quando aparecer o endereço `http://localhost:5173`, abra-o no navegador
+
+### 🛠️ Opção 2 — Linha de comando manual
 
 **Pré-requisitos:** Node.js 18+ e npm
 
