@@ -2,6 +2,13 @@
 
 Um jogo/jardim mágico para navegador, construído com **Three.js + Vite**. Visual forte, arquitetura modular e pronto para crescer.
 
+## 🎮 Jogar agora — sem instalar nada!
+
+> **Abra o link abaixo no navegador e jogue diretamente:**
+> ### ➡️ https://JAOG1V1.github.io/JAOG1V1-BloomGardenUltimate/
+
+Nenhum download necessário. Funciona no celular e no computador.
+
 ---
 
 ## ✨ Visão geral
@@ -65,11 +72,11 @@ npm run preview
 
 ---
 
-## 🌐 Deploy no GitHub Pages
+## 🌐 Deploy no GitHub Pages (automático)
 
-1. Faça o build: `npm run build`
-2. Publique a pasta `dist/` no branch `gh-pages` (ou configure via GitHub Actions)
-3. Acesse em: `https://JAOG1V1.github.io/JAOG1V1-BloomGardenUltimate/`
+A cada push na branch `main`, o GitHub Actions faz o build e publica automaticamente.
+
+Acesse em: **https://JAOG1V1.github.io/JAOG1V1-BloomGardenUltimate/**
 
 ---
 
