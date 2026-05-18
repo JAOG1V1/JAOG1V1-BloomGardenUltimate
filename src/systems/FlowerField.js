@@ -19,7 +19,30 @@ function buildPetal(color = 0xff5fb3, scale = 1) {
   return new THREE.Mesh(geo, mat);
 }
 
-// ─── Single flower ──────────────────────────────────────────────────────────
+// ─── Narrow pointed petal (daisy/aster style) ───────────────────────────────
+function buildNarrowPetal(color, scale = 1) {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.bezierCurveTo(-0.1 * scale, 0.3 * scale, -0.08 * scale, 0.8 * scale, 0, 1.1 * scale);
+  shape.bezierCurveTo( 0.08 * scale, 0.8 * scale,  0.1 * scale, 0.3 * scale, 0, 0);
+  const geo = new THREE.ShapeGeometry(shape, 16);
+  const mat = new THREE.MeshStandardMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: 0.95, roughness: 0.5 });
+  return new THREE.Mesh(geo, mat);
+}
+
+// ─── Tulip cup petal ────────────────────────────────────────────────────────
+function buildTulipPetal(color, scale = 1) {
+  const shape = new THREE.Shape();
+  shape.moveTo(-0.22 * scale, 0);
+  shape.bezierCurveTo(-0.35 * scale, 0.5 * scale, -0.3 * scale, 1.0 * scale, 0, 1.2 * scale);
+  shape.bezierCurveTo( 0.3 * scale,  1.0 * scale,  0.35 * scale, 0.5 * scale, 0.22 * scale, 0);
+  shape.lineTo(-0.22 * scale, 0);
+  const geo = new THREE.ShapeGeometry(shape, 20);
+  const mat = new THREE.MeshStandardMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: 0.95, roughness: 0.35 });
+  return new THREE.Mesh(geo, mat);
+}
+
+// ─── Single flower (original rose/large style) ──────────────────────────────
 function buildFlower({ isMain = false, stemHeight = 3.2, petalCount = 10, petalColor = 0xffc15f, centerColor = 0xffd166, scale = 1 } = {}) {
   const group = new THREE.Group();
 
@@ -74,6 +97,140 @@ function buildFlower({ isMain = false, stemHeight = 3.2, petalCount = 10, petalC
   return { group, head, petalMeshes: head.children.filter(c => c !== center), center, stemHeight };
 }
 
+// ─── Daisy / aster style ────────────────────────────────────────────────────
+function buildDaisy({ stemHeight = 2.8, petalColor = 0xffffff, centerColor = 0xffd700, scale = 1 } = {}) {
+  const group = new THREE.Group();
+
+  const stemGeo = new THREE.CylinderGeometry(0.04 * scale, 0.06 * scale, stemHeight, 10);
+  const stemMat = new THREE.MeshStandardMaterial({ color: 0x339944, roughness: 0.75 });
+  group.add(Object.assign(new THREE.Mesh(stemGeo, stemMat), { position: new THREE.Vector3(0, stemHeight / 2, 0) }));
+
+  const head = new THREE.Group();
+  head.position.y = stemHeight;
+
+  const petalCount = 18;
+  for (let i = 0; i < petalCount; i++) {
+    const p = buildNarrowPetal(petalColor, scale * 0.8);
+    p.rotation.z = (i / petalCount) * Math.PI * 2;
+    p.rotation.x = 0.08;
+    head.add(p);
+  }
+
+  const cGeo = new THREE.CircleGeometry(0.18 * scale, 24);
+  const cMat = new THREE.MeshStandardMaterial({ color: centerColor, roughness: 0.25, emissive: new THREE.Color(centerColor), emissiveIntensity: 0.35 });
+  const center = new THREE.Mesh(cGeo, cMat);
+  center.rotation.x = -Math.PI / 2;
+  head.add(center);
+  group.add(head);
+
+  return { group, head, petalMeshes: head.children.filter(c => c !== center), center, stemHeight };
+}
+
+// ─── Tulip style ────────────────────────────────────────────────────────────
+function buildTulip({ stemHeight = 3.5, petalColor = 0xff3366, scale = 1 } = {}) {
+  const group = new THREE.Group();
+
+  const stemGeo = new THREE.CylinderGeometry(0.05 * scale, 0.08 * scale, stemHeight, 10);
+  const stemMat = new THREE.MeshStandardMaterial({ color: 0x2fa355, roughness: 0.7 });
+  const stem    = new THREE.Mesh(stemGeo, stemMat);
+  stem.position.y = stemHeight / 2;
+  group.add(stem);
+
+  // Long strap-leaf
+  const leafGeo = new THREE.PlaneGeometry(0.25 * scale, 2.0 * scale);
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x2c8e4a, side: THREE.DoubleSide, roughness: 0.8 });
+  const leaf = new THREE.Mesh(leafGeo, leafMat);
+  leaf.position.set(-0.25 * scale, stemHeight * 0.55, 0);
+  leaf.rotation.z = -0.35;
+  group.add(leaf);
+
+  const head = new THREE.Group();
+  head.position.y = stemHeight;
+
+  const petals = 6;
+  for (let i = 0; i < petals; i++) {
+    const p = buildTulipPetal(petalColor, scale);
+    p.rotation.z = (i / petals) * Math.PI * 2;
+    p.rotation.x = -0.25; // cup inward
+    head.add(p);
+  }
+  group.add(head);
+
+  return { group, head, petalMeshes: head.children, center: null, stemHeight };
+}
+
+// ─── Lotus / water-lily style ────────────────────────────────────────────────
+function buildLotus({ petalColor = 0xffccee, centerColor = 0xffee88, scale = 1 } = {}) {
+  const group = new THREE.Group();
+  const head  = new THREE.Group();
+
+  // Outer ring
+  const outerPetals = 12;
+  for (let i = 0; i < outerPetals; i++) {
+    const p = buildPetal(petalColor, scale * 0.7);
+    p.rotation.z = (i / outerPetals) * Math.PI * 2;
+    p.rotation.x = -0.45;
+    head.add(p);
+  }
+  // Inner ring
+  for (let i = 0; i < 8; i++) {
+    const p = buildPetal(new THREE.Color(petalColor).offsetHSL(0, 0.1, 0.1).getHex(), scale * 0.45);
+    p.rotation.z = (i / 8) * Math.PI * 2 + Math.PI / 8;
+    p.rotation.x = -0.7;
+    head.add(p);
+  }
+
+  const cGeo = new THREE.CircleGeometry(0.16 * scale, 24);
+  const cMat = new THREE.MeshStandardMaterial({ color: centerColor, roughness: 0.2, emissive: new THREE.Color(centerColor), emissiveIntensity: 0.5 });
+  const center = new THREE.Mesh(cGeo, cMat);
+  center.rotation.x = -Math.PI / 2;
+  head.add(center);
+
+  // Flat pad
+  const padGeo = new THREE.CircleGeometry(1.0 * scale, 20);
+  const padMat = new THREE.MeshStandardMaterial({ color: 0x2d7a3a, roughness: 0.9, side: THREE.DoubleSide });
+  const pad = new THREE.Mesh(padGeo, padMat);
+  pad.rotation.x = -Math.PI / 2;
+  pad.position.y = -0.05;
+  group.add(pad);
+
+  group.add(head);
+  return { group, head, petalMeshes: head.children.filter(c => c !== center), center, stemHeight: 0 };
+}
+
+// ─── Sunflower style ────────────────────────────────────────────────────────
+function buildSunflower({ stemHeight = 5.0, scale = 1 } = {}) {
+  const group = new THREE.Group();
+
+  const stemGeo = new THREE.CylinderGeometry(0.07 * scale, 0.1 * scale, stemHeight, 10);
+  const stemMat = new THREE.MeshStandardMaterial({ color: 0x4a9a3a, roughness: 0.7 });
+  const stem    = new THREE.Mesh(stemGeo, stemMat);
+  stem.position.y = stemHeight / 2;
+  group.add(stem);
+
+  const head = new THREE.Group();
+  head.position.y = stemHeight;
+
+  // Ray petals (yellow)
+  const rays = 22;
+  for (let i = 0; i < rays; i++) {
+    const p = buildNarrowPetal(0xffcc00, scale * 1.1);
+    p.rotation.z = (i / rays) * Math.PI * 2;
+    p.rotation.x = 0.05;
+    head.add(p);
+  }
+
+  // Dark center disk
+  const cGeo = new THREE.CircleGeometry(0.35 * scale, 32);
+  const cMat = new THREE.MeshStandardMaterial({ color: 0x5a2d00, roughness: 0.7, emissive: new THREE.Color(0x3a1800), emissiveIntensity: 0.2 });
+  const center = new THREE.Mesh(cGeo, cMat);
+  center.rotation.x = -Math.PI / 2;
+  head.add(center);
+  group.add(head);
+
+  return { group, head, petalMeshes: head.children.filter(c => c !== center), center, stemHeight };
+}
+
 // ─── FlowerField ────────────────────────────────────────────────────────────
 export class FlowerField {
   constructor() {
@@ -94,19 +251,48 @@ export class FlowerField {
     this.flowers.push(main);
     this.mainFlower = main;
 
-    // Background flowers
+    // Background flowers — mix of all species
     const configs = [
-      { color: 0xffc15f, cc: 0xffed8a, s: 0.75, petals: 12, h: 3.8 },
-      { color: 0xb06fff, cc: 0xd0a0ff, s: 0.65, petals: 8,  h: 3.2 },
-      { color: 0x7ef0b5, cc: 0xabffe0, s: 0.7,  petals: 10, h: 4.0 },
-      { color: 0xff8bd0, cc: 0xffd1ee, s: 0.55, petals: 9,  h: 2.8 }
+      { type: "rose",     color: 0xffc15f, cc: 0xffed8a, s: 0.75, petals: 12, h: 3.8 },
+      { type: "rose",     color: 0xb06fff, cc: 0xd0a0ff, s: 0.65, petals: 8,  h: 3.2 },
+      { type: "rose",     color: 0x7ef0b5, cc: 0xabffe0, s: 0.7,  petals: 10, h: 4.0 },
+      { type: "rose",     color: 0xff8bd0, cc: 0xffd1ee, s: 0.55, petals: 9,  h: 2.8 },
+      { type: "daisy",    color: 0xffffff, cc: 0xffd700, s: 0.8,  h: 2.6 },
+      { type: "daisy",    color: 0xffe0f0, cc: 0xff8800, s: 0.7,  h: 2.2 },
+      { type: "tulip",    color: 0xff3366, s: 0.8,  h: 3.5 },
+      { type: "tulip",    color: 0xff9900, s: 0.75, h: 3.2 },
+      { type: "tulip",    color: 0x9966ff, s: 0.7,  h: 3.8 },
+      { type: "sunflower",                 s: 0.7,  h: 4.5 },
+      { type: "sunflower",                 s: 0.6,  h: 5.0 },
     ];
 
-    for (let i = 0; i < 20; i++) {
+    // Lotus flowers near the pond area
+    for (let i = 0; i < 4; i++) {
+      const angle = Math.PI + (i - 1.5) * 0.3;
+      const dist  = 9.5 + i * 0.5;
+      const f = buildLotus({ petalColor: i % 2 === 0 ? 0xffccee : 0xffffff, scale: 0.6 + i * 0.1 });
+      f.group.position.set(Math.cos(angle) * dist, 0.02, Math.sin(angle) * dist * 0.6);
+      f.group.rotation.y = Math.random() * Math.PI * 2;
+      this.group.add(f.group);
+      this.flowers.push(f);
+    }
+
+    for (let i = 0; i < 28; i++) {
       const cfg = configs[i % configs.length];
-      const f = buildFlower({ stemHeight: cfg.h, petalCount: cfg.petals, petalColor: cfg.color, centerColor: cfg.cc, scale: cfg.s });
+      let f;
+
+      if (cfg.type === "daisy") {
+        f = buildDaisy({ stemHeight: cfg.h, petalColor: cfg.color, centerColor: cfg.cc, scale: cfg.s });
+      } else if (cfg.type === "tulip") {
+        f = buildTulip({ stemHeight: cfg.h, petalColor: cfg.color, scale: cfg.s });
+      } else if (cfg.type === "sunflower") {
+        f = buildSunflower({ stemHeight: cfg.h, scale: cfg.s });
+      } else {
+        f = buildFlower({ stemHeight: cfg.h, petalCount: cfg.petals, petalColor: cfg.color, centerColor: cfg.cc, scale: cfg.s });
+      }
+
       const angle = Math.random() * Math.PI * 2;
-      const dist  = 3.5 + Math.random() * 9;
+      const dist  = 3.5 + Math.random() * 10;
       f.group.position.set(Math.cos(angle) * dist, 0, Math.sin(angle) * dist * 0.65);
       f.group.rotation.y = Math.random() * Math.PI * 2;
       this.group.add(f.group);
@@ -139,6 +325,11 @@ export class FlowerField {
     this.group.add(this.glowRing);
   }
 
+  /** Returns flat list of all flower world positions (for Bee routing etc.) */
+  getFlowerPositions() {
+    return this.flowers.map(f => f.group.position.clone());
+  }
+
   /** Burst of energy — scale the main flower briefly */
   energize() {
     this._burst = 1.0;
@@ -168,7 +359,7 @@ export class FlowerField {
     for (let i = 1; i < this.flowers.length; i++) {
       const f = this.flowers[i];
       f.group.rotation.z = Math.sin(t * 0.7 + i * 1.3) * 0.06;
-      f.head.rotation.y  = t * (0.3 + (i % 3) * 0.15);
+      if (f.head) f.head.rotation.y = t * (0.3 + (i % 3) * 0.15);
     }
   }
 }

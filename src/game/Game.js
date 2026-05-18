@@ -50,6 +50,14 @@ export class Game {
     // Pointer interaction
     this._canvas.addEventListener("pointerdown", e => this._onPointer(e));
 
+    // Day/Night toggle
+    this._ui.bindDayNightToggle(() => {
+      if (this._scene) this._scene.toggleDayNight();
+    });
+
+    // Photo mode
+    this._ui.bindPhotoMode(null);
+
     // Start loop
     this._running = true;
     requestAnimationFrame(t => this._loop(t));
@@ -96,6 +104,11 @@ export class Game {
     }
 
     this._ui.setHUD(s);
+
+    // Update time display
+    if (this._scene) {
+      this._ui.setTimeLabel(this._scene.timeLabel);
+    }
   }
 
   // ── Interaction ──────────────────────────────────────────────────────────
