@@ -64,7 +64,7 @@ Abra `http://localhost:5173` no navegador.
 npm run build
 ```
 
-Os arquivos gerados ficam em `dist/`. Para visualizar o build localmente:
+Os arquivos gerados ficam em `docs/`. Para visualizar o build localmente:
 
 ```bash
 npm run preview
@@ -72,9 +72,15 @@ npm run preview
 
 ---
 
-## 🌐 Deploy no GitHub Pages (automático)
+## 🌐 Deploy no GitHub Pages (`main` + `/docs`)
 
-A cada push na branch `main`, o GitHub Actions faz o build e publica automaticamente.
+Este projeto publica o site a partir da pasta `docs/` versionada na branch `main`.
+O workflow `.github/workflows/deploy.yml` roda `npm run build` e atualiza `docs/` automaticamente a cada push.
+
+Em **Settings → Pages**, garanta:
+- **Source:** Deploy from a branch
+- **Branch:** `main`
+- **Folder:** `/docs`
 
 Acesse em: **https://JAOG1V1.github.io/JAOG1V1-BloomGardenUltimate/**
 
