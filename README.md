@@ -72,15 +72,18 @@ npm run preview
 
 ---
 
-## 🌐 Deploy no GitHub Pages (`main` + `/docs`)
+## 🌐 Deploy no GitHub Pages
 
-Este projeto publica o site a partir da pasta `docs/` versionada na branch `main`.
-O workflow `.github/workflows/deploy.yml` roda `npm run build` e atualiza `docs/` automaticamente a cada push.
+Este projeto é publicado pelo workflow `.github/workflows/deploy.yml`, que a cada push em `main`:
 
-Em **Settings → Pages**, garanta:
-- **Source:** Deploy from a branch
-- **Branch:** `main`
-- **Folder:** `/docs`
+1. Roda `npm run build` (saída em `docs/`).
+2. Faz commit de `docs/` de volta na branch.
+3. Publica `docs/` no GitHub Pages via `actions/deploy-pages` (deploy oficial).
+
+Em **Settings → Pages**, configure uma única vez:
+- **Source:** `GitHub Actions`
+
+> Importante: se a Source estiver como "Deploy from a branch" apontando para a **raiz** do `main`, o Pages irá servir o `index.html` da raiz (que é o ponto de entrada do Vite em desenvolvimento e referencia `/src/...`), resultando em página sem CSS/JS. Usando "GitHub Actions" o conteúdo publicado é sempre o build de `docs/`.
 
 Acesse em: **https://JAOG1V1.github.io/JAOG1V1-BloomGardenUltimate/**
 
