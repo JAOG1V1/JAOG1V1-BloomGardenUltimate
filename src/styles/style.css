@@ -1,13 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Cinzel:wght@400;700&display=swap');
+
 :root {
   --bg-1: #0a0e2a;
   --bg-2: #1a2050;
   --text: #f0f2ff;
   --soft: rgba(255, 255, 255, 0.13);
-  --panel: rgba(10, 14, 42, 0.52);
+  --panel: rgba(10, 14, 42, 0.55);
   --accent: #ff6fb6;
   --accent-2: #ffd166;
   --good: #7ef0b5;
   --neon: #c084fc;
+  --radius: 20px;
 }
 
 * {
@@ -21,7 +24,7 @@ body,
   height: 100%;
   margin: 0;
   overflow: hidden;
-  font-family: "Segoe UI", Inter, Arial, Helvetica, sans-serif;
+  font-family: "Quicksand", "Segoe UI", Inter, Arial, sans-serif;
   background: radial-gradient(ellipse at 50% 10%, #3b1f6a 0%, #18224f 40%, #070c1f 100%);
   color: var(--text);
 }
@@ -44,32 +47,43 @@ body {
   pointer-events: none;
 }
 
+/* ─── Photo mode: hide all UI ─── */
+#ui-root.photo-mode .hud,
+#ui-root.photo-mode .bottom-message,
+#ui-root.photo-mode .action-buttons {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
 /* ─── Glassmorphism ─── */
 .glass {
   background: var(--panel);
-  border: 1px solid rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 24px 64px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 24px 64px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 /* ─── HUD ─── */
 .hud {
   position: absolute;
-  top: 18px;
-  left: 18px;
-  width: min(380px, calc(100vw - 36px));
-  border-radius: 22px;
-  padding: 16px 18px 14px;
+  top: 16px;
+  left: 16px;
+  width: min(340px, calc(100vw - 32px));
+  border-radius: var(--radius);
+  padding: 14px 16px 12px;
+  transition: opacity 0.4s ease;
 }
 
 .hud-title {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.3px;
-  margin-bottom: 14px;
+  font-family: "Cinzel", serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
   background: linear-gradient(90deg, #ff8bd0, #ffd166, #7ef0b5);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -79,31 +93,38 @@ body {
 .hud-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px 12px;
+  gap: 5px 10px;
 }
 
 .hud-stat {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 13px;
-  opacity: 0.94;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.92;
 }
 
 .hud-icon {
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .hud-val {
   font-weight: 700;
   color: var(--accent-2);
   margin-left: auto;
+  font-size: 13px;
+}
+
+.hud-unit {
+  font-size: 11px;
+  opacity: 0.7;
 }
 
 .energy-bar {
   width: 100%;
-  height: 10px;
-  margin-top: 12px;
+  height: 8px;
+  margin-top: 10px;
   border-radius: 999px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.1);
@@ -115,21 +136,69 @@ body {
   border-radius: 999px;
   background: linear-gradient(90deg, #ff6fb6, #ffd166, #7ef0b5);
   transition: width 150ms ease;
-  box-shadow: 0 0 8px rgba(255, 111, 182, 0.7);
+  box-shadow: 0 0 8px rgba(255, 111, 182, 0.6);
+}
+
+.hud-time {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.8;
+  color: #c0d8ff;
+}
+
+/* ─── Action buttons (top-right) ─── */
+.action-buttons {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+  transition: opacity 0.4s ease;
+}
+
+.action-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 24px rgba(255, 111, 182, 0.4);
+}
+
+.action-btn:active {
+  transform: scale(0.94);
 }
 
 /* ─── Bottom message ─── */
 .bottom-message {
   position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: 18px;
-  min-height: 52px;
-  border-radius: 18px;
-  padding: 14px 18px;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  min-height: 48px;
+  border-radius: 16px;
+  padding: 12px 16px;
   font-size: 14px;
+  font-weight: 500;
   line-height: 1.5;
   pointer-events: none;
+  transition: opacity 0.4s ease;
 }
 
 /* ─── Menu overlay ─── */
@@ -138,12 +207,12 @@ body {
   inset: 0;
   display: grid;
   place-items: center;
-  background: radial-gradient(ellipse at 50% 40%, rgba(80, 20, 140, 0.45) 0%, rgba(5, 10, 28, 0.6) 100%);
+  background: radial-gradient(ellipse at 50% 40%, rgba(80, 20, 140, 0.5) 0%, rgba(5, 10, 28, 0.65) 100%);
   pointer-events: auto;
 }
 
 .menu-card {
-  width: min(640px, calc(100vw - 40px));
+  width: min(620px, calc(100vw - 40px));
   padding: 36px 38px 32px;
   border-radius: 28px;
   text-align: center;
@@ -169,11 +238,12 @@ body {
 }
 
 .menu-card h1 {
+  font-family: "Cinzel", serif;
   margin: 0 0 8px;
-  font-size: clamp(30px, 5.5vw, 58px);
-  font-weight: 900;
+  font-size: clamp(28px, 5vw, 54px);
+  font-weight: 700;
   line-height: 1.1;
-  letter-spacing: -1px;
+  letter-spacing: 0.5px;
 }
 
 .menu-card h1 span {
@@ -184,10 +254,21 @@ body {
 }
 
 .menu-card p {
-  margin: 0 0 28px;
-  font-size: 16px;
+  margin: 0 0 18px;
+  font-size: 15px;
   opacity: 0.85;
   line-height: 1.6;
+}
+
+.menu-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  justify-content: center;
+  margin-bottom: 24px;
+  font-size: 13px;
+  opacity: 0.7;
+  font-weight: 500;
 }
 
 .menu-card button {
@@ -195,15 +276,16 @@ body {
   appearance: none;
   border: 0;
   border-radius: 18px;
-  padding: 16px 36px;
-  font-size: 18px;
-  font-weight: 800;
+  padding: 15px 34px;
+  font-size: 17px;
+  font-weight: 700;
+  font-family: "Quicksand", sans-serif;
   cursor: pointer;
   color: white;
   background: linear-gradient(135deg, #d63fc9, #ff6fb6, #ff9f43);
   box-shadow: 0 10px 36px rgba(214, 63, 201, 0.42), 0 0 0 1px rgba(255,255,255,0.12);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.3px;
   overflow: hidden;
 }
 

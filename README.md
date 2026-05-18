@@ -1,6 +1,6 @@
 # 🌸 Bloom Garden Ultimate
 
-Um jogo/jardim mágico para navegador, construído com **Three.js + Vite**. Visual forte, arquitetura modular e pronto para crescer.
+Um jardim mágico 3D para navegador, construído com **Three.js + Vite**. Visual rico, criaturas animadas, ciclo dia/noite e arquitetura modular ESM.
 
 ## 🎮 Jogar agora — sem instalar nada!
 
@@ -11,21 +11,38 @@ Nenhum download necessário. Funciona no celular e no computador.
 
 ---
 
-## ✨ Visão geral
+## ✨ O que há no jardim
 
-Bloom Garden Ultimate é uma experiência web interativa onde você cultiva um jardim mágico vivo:
-
-- Cena 3D imersiva com céu animado, partículas mágicas e flores vivas
-- Clique na flor central para energizá-la e gerar seiva
-- Sistema de progressão com pontuação, seiva, energia e níveis
-- Save automático no localStorage
-- Base pronta para expansões futuras (mercado, missões, biomas, achievements)
+| Elemento | Descrição |
+|---|---|
+| 🌸 **Flores variadas** | Rosa, girassol, tulipa, margarida, lótus e mais (7 espécies) |
+| 🦋 **Borboletas** | 8 borboletas coloridas com trajetórias em figura-8 e batida de asas |
+| 🐝 **Abelhas** | 6 abelhas que coletam pólen em rotas Bézier entre flores |
+| 🍄 **Cogumelos mágicos** | 12 cogumelos brilhantes com material emissivo pulsante |
+| ✨ **Vagalumes** | 18 vagalumes que aparecem à noite com luz suave |
+| 🌳 **Árvores estilizadas** | 8 árvores com folhagem em camadas que balança no vento |
+| 💧 **Lagoa** | Superfície d'água animada com ondulações e reflexos |
+| 🪨 **Pedras decorativas** | 14 rochas espalhadas pelo cenário |
+| 🌿 **Grama instanciada** | 1600 tufos de grama animados via InstancedMesh |
+| 🌸 **Pétalas caindo** | 100 pétalas coloridas derivando pelo jardim |
+| 🌅 **Ciclo dia/noite** | Transição completa: amanhecer → meio-dia → pôr do sol → noite estrelada |
+| 🌙 **Lua e estrelas** | Aparecem progressivamente durante a noite |
+| 🌫️ **Neblina** | Fog suave para profundidade e atmosfera |
 
 ---
 
-## 🚀 Como abrir sem VS Code
+## 🎮 Controles
 
-Você **não precisa** do VS Code para jogar! Siga uma das opções abaixo:
+| Ação | Como fazer |
+|---|---|
+| Energizar flor | Clique / toque na flor central |
+| Alternar Dia / Noite | Botão 🌙 (canto superior direito) |
+| Modo Foto (esconde HUD) | Botão 📷 (canto superior direito) |
+| Câmera girando | Automática (órbita lenta) |
+
+---
+
+## 🚀 Como abrir localmente
 
 ### ▶️ Opção 1 — Script de início rápido (recomendado)
 
@@ -40,17 +57,10 @@ Você **não precisa** do VS Code para jogar! Siga uma das opções abaixo:
 
 ### 🛠️ Opção 2 — Linha de comando manual
 
-**Pré-requisitos:** Node.js 18+ e npm
-
 ```bash
-# 1. Clone o repositório
 git clone https://github.com/JAOG1V1/JAOG1V1-BloomGardenUltimate.git
 cd JAOG1V1-BloomGardenUltimate
-
-# 2. Instale as dependências
 npm install
-
-# 3. Inicie o servidor de desenvolvimento
 npm run dev
 ```
 
@@ -78,12 +88,7 @@ Este projeto é publicado pelo workflow `.github/workflows/deploy.yml`, que a ca
 
 1. Roda `npm run build` (saída em `docs/`).
 2. Faz commit de `docs/` de volta na branch.
-3. Publica `docs/` no GitHub Pages via `actions/deploy-pages` (deploy oficial).
-
-Em **Settings → Pages**, configure uma única vez:
-- **Source:** `GitHub Actions`
-
-> Importante: se a Source estiver como "Deploy from a branch" apontando para a **raiz** do `main`, o Pages irá servir o `index.html` da raiz (que é o ponto de entrada do Vite em desenvolvimento e referencia `/src/...`), resultando em página sem CSS/JS. Usando "GitHub Actions" o conteúdo publicado é sempre o build de `docs/`.
+3. Publica `docs/` no GitHub Pages via `actions/deploy-pages`.
 
 Acesse em: **https://JAOG1V1.github.io/JAOG1V1-BloomGardenUltimate/**
 
@@ -99,17 +104,29 @@ bloom-garden-ultimate/
 └── src/
     ├── main.js              # Ponto de entrada
     ├── styles/
-    │   └── style.css        # Estilos globais com glassmorphism
+    │   └── style.css        # Tema mágico com Quicksand + Cinzel + glassmorphism
     ├── game/
     │   ├── Game.js          # Loop principal e orquestração
-    │   ├── UI.js            # Controle do HUD e menus
+    │   ├── UI.js            # HUD, modo foto, toggle dia/noite
     │   └── SaveSystem.js    # Save/load via localStorage
     ├── scenes/
-    │   └── GardenScene.js   # Cena Three.js (câmera, luzes, renderer)
-    └── systems/
-        ├── SkyDome.js       # Cúpula do céu animada com aurora e estrelas
-        ├── ParticleField.js # Campo de partículas mágicas flutuantes
-        └── FlowerField.js   # Flor central + campo de flores de fundo
+    │   └── GardenScene.js   # Cena Three.js — integra todos os sistemas
+    ├── systems/
+    │   ├── SkyDome.js       # Cúpula do céu com lua, estrelas e aurora
+    │   ├── ParticleField.js # Campo de partículas mágicas
+    │   └── FlowerField.js   # 7 espécies de flores (rosa, tulipa, girassol…)
+    ├── world/
+    │   ├── DayNightCycle.js # Ciclo dia/noite com luzes e cores animadas
+    │   ├── GrassField.js    # Grama instanciada (InstancedMesh)
+    │   ├── TreeField.js     # Árvores estilizadas com folhagem em camadas
+    │   ├── Pond.js          # Lagoa com ondulações animadas
+    │   └── PetalParticles.js# Pétalas caindo
+    └── entities/
+        ├── Butterfly.js     # Borboletas com trajetória figura-8
+        ├── Bee.js           # Abelhas com rota Bézier entre flores
+        ├── Mushroom.js      # Cogumelos com emissivo pulsante
+        ├── Firefly.js       # Vagalumes noturnos (PointLights)
+        └── Rock.js          # Pedras decorativas
 ```
 
 ---
@@ -118,26 +135,18 @@ bloom-garden-ultimate/
 
 | Tecnologia | Uso |
 |---|---|
-| [Three.js](https://threejs.org/) | Renderização 3D WebGL |
-| [Vite](https://vitejs.dev/) | Bundler e dev server |
-| JavaScript (ESM) | Lógica do jogo |
+| [Three.js](https://threejs.org/) v0.174 | Renderização 3D WebGL |
+| [Vite](https://vitejs.dev/) v6 | Bundler e dev server |
+| JavaScript (ESM) | Lógica modular |
+| Google Fonts (Quicksand + Cinzel) | Tipografia mágica |
 
 ---
 
-## 🎮 Como jogar
+## 🎮 Progressão do jogo
 
 1. Clique em **"Entrar no Jardim"** no menu inicial
-2. **Clique ou toque na flor central** para energizá-la
-3. A energia gera seiva, a seiva gera pontuação e faz você subir de nível
-4. O jardim pulsa e reage às suas interações!
+2. **Clique ou toque na flor central** para gerar energia
+3. Energia → Seiva → Pontuação → Nível
+4. O jardim pulsa, muda de cor e reage às suas interações!
+5. Espere a noite para ver os vagalumes aparecerem ✨
 
----
-
-## 🔮 Próximas expansões planejadas
-
-- [ ] Mercado de upgrades (velocidade, multiplicadores)
-- [ ] Sistema de missões e achievements
-- [ ] Biomas desbloqueáveis (floresta, oceano, vulcão)
-- [ ] Efeitos visuais avançados (bloom, pós-processamento)
-- [ ] Modo noturno e transições de dia/noite
-- [ ] Sistema de som ambiente
