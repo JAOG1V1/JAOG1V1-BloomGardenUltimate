@@ -156,7 +156,7 @@ export class GardenScene {
         varying vec2 vUv;
         void main() {
           vec4 c = texture2D(tDiffuse, vUv);
-          // Saturation around luminance.
+          // Saturation around luminance (ITU-R BT.709 luma coefficients).
           float l = dot(c.rgb, vec3(0.299, 0.587, 0.114));
           c.rgb = mix(vec3(l), c.rgb, uSaturation);
           // Warm tint: lift reds, gently drop blues.
