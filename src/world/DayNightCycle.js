@@ -128,6 +128,13 @@ export class DayNightCycle {
     );
     this.sunLight.intensity = p.sunInt;
 
+    // Drive the visible sky sun (glow/halo) along the same arc.
+    if (this._sky.setSun) {
+      const sx = Math.cos(sunAngle), sy = Math.sin(sunAngle), sz = 0.32;
+      const len = Math.hypot(sx, sy, sz) || 1;
+      this._sky.setSun(sx / len, sy / len, sz / len, p.sunInt);
+    }
+
     // Moon: opposite of sun
     this.moonLight.position.set(
       -Math.cos(sunAngle) * 50,
@@ -146,9 +153,12 @@ export class DayNightCycle {
       this.nightFactor = 0;
     }
 
-    // Fog color
+    // Fog colour: match the bright horizon haze so the ground melts into the
+    // distant hills/sky instead of ending on a hard line. Warmer & lighter by
+    // day, cool & dark at night.
     if (this._fog) {
-      this._fog.color.setHSL(p.skyH, p.skyS * 0.5, p.skyL * 0.6);
+      const fogL = Math.min(0.78, p.skyL * 0.95 + 0.06);
+      this._fog.color.setHSL(p.skyH, p.skyS * 0.5, fogL);
     }
   }
 

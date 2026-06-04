@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { SPECIES } from "./FlowerSpecies.js";
+import { glowDiscTexture, softCircleTexture } from "./textures.js";
 
 const SPECIES_BY_ID = Object.fromEntries(SPECIES.map(s => [s.id, s]));
 
@@ -48,22 +49,36 @@ export class FlowerField {
     this._placeMeadow();
 
     // ── Ground ────────────────────────────────────────────────────────────────
-    const groundGeo = new THREE.CircleGeometry(30, 80);
-    const groundMat = new THREE.MeshStandardMaterial({ color: 0x274a2c, roughness: 0.95 });
+    // A radial vertex-colour gradient (warm/lush at the centre fading to a
+    // cooler, lighter tone at the rim) helps the ground melt into the fog &
+    // distant hills instead of reading as a flat disc.
+    const groundGeo = new THREE.CircleGeometry(34, 96);
+    this._tintGround(groundGeo);
+    const groundMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     this.group.add(ground);
 
-    // ── Glow ring around the hero flower (bloom-friendly) ────────────────────
-    const ringGeo = new THREE.RingGeometry(0.6, 2.2, 64);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xff6fb6, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide,
+    // ── Magical energy disc around the hero flower (bloom-friendly) ──────────
+    // A soft additive radial glow (no hard ring → no black hole in the middle)
+    // plus a slow ring of orbiting sparkle motes.
+    const discGeo = new THREE.PlaneGeometry(5.2, 5.2);
+    this._ringMat = new THREE.MeshBasicMaterial({
+      map: glowDiscTexture(),
+      color: 0xff6fb6,
+      transparent: true,
+      opacity: 0.5,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      fog: false,
     });
-    this.glowRing = new THREE.Mesh(ringGeo, ringMat);
+    this.glowRing = new THREE.Mesh(discGeo, this._ringMat);
     this.glowRing.rotation.x = -Math.PI / 2;
-    this.glowRing.position.y = 0.02;
+    this.glowRing.position.y = 0.03;
     this.group.add(this.glowRing);
+    this._buildRingMotes();
 
     this._buildBurst(main.stemHeight + 0.4);
   }
@@ -132,6 +147,53 @@ export class FlowerField {
     return true;
   }
 
+  // ─── Ground radial colour gradient ──────────────────────────────────────
+  _tintGround(geo) {
+    const pos = geo.attributes.position;
+    const colors = new Float32Array(pos.count * 3);
+    const inner = new THREE.Color(0x2f6b3a); // lush warm green at the centre
+    const outer = new THREE.Color(0x5a7d66); // lighter, cooler tone at the rim
+    const c = new THREE.Color();
+    const maxR = 34;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), y = pos.getY(i);
+      const f = Math.min(1, Math.sqrt(x * x + y * y) / maxR);
+      c.copy(inner).lerp(outer, f * f);
+      colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+    }
+    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  }
+
+  // ─── Orbiting sparkle motes for the energy disc ─────────────────────────
+  _buildRingMotes() {
+    const count = 36;
+    this._moteCount = count;
+    this._moteAngle = new Float32Array(count);
+    this._moteRadius = new Float32Array(count);
+    this._moteSpeed = new Float32Array(count);
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+    const palette = [new THREE.Color(0xff8bd0), new THREE.Color(0xffd166), new THREE.Color(0xffffff)];
+    for (let i = 0; i < count; i++) {
+      this._moteAngle[i]  = Math.random() * Math.PI * 2;
+      this._moteRadius[i] = 1.1 + Math.random() * 1.3;
+      this._moteSpeed[i]  = 0.3 + Math.random() * 0.5;
+      const c = palette[i % palette.length];
+      colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    this._motePos = positions;
+    this._moteMat = new THREE.PointsMaterial({
+      map: softCircleTexture(), alphaMap: softCircleTexture(),
+      size: 0.22, vertexColors: true, transparent: true, opacity: 0.9,
+      depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true,
+    });
+    this._motePoints = new THREE.Points(geo, this._moteMat);
+    this.group.add(this._motePoints);
+  }
+
   // ─── Click spark burst ──────────────────────────────────────────────────
   _buildBurst(originY) {
     this._burstCount = 28;
@@ -151,7 +213,8 @@ export class FlowerField {
     geo.setAttribute("position", new THREE.BufferAttribute(this._burstPos, 3));
     geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
     this._burstMat = new THREE.PointsMaterial({
-      size: 0.3, vertexColors: true, transparent: true, opacity: 0,
+      size: 0.45, vertexColors: true, transparent: true, opacity: 0,
+      map: softCircleTexture(), alphaMap: softCircleTexture(),
       depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true,
     });
     this._burstPoints = new THREE.Points(geo, this._burstMat);
@@ -198,8 +261,22 @@ export class FlowerField {
       this._burst = Math.max(0, burst - 0.04);
     }
 
-    this.glowRing.material.opacity = 0.12 + Math.sin(t * 2.4) * 0.07 + burst * 0.22;
-    this.glowRing.scale.setScalar(1 + Math.sin(t * 2.4) * 0.05);
+    const pulse = 0.36 + Math.sin(t * 2.4) * 0.1 + burst * 0.4;
+    this._ringMat.opacity = pulse;
+    this.glowRing.scale.setScalar(1 + Math.sin(t * 2.4) * 0.05 + burst * 0.15);
+    this.glowRing.rotation.z = t * 0.15;
+
+    // Orbiting sparkle motes around the energy disc.
+    const mp = this._motePos;
+    for (let i = 0; i < this._moteCount; i++) {
+      const ang = this._moteAngle[i] + t * this._moteSpeed[i];
+      const r = this._moteRadius[i] * (1 + Math.sin(t * 1.5 + i) * 0.05);
+      mp[i * 3]     = Math.cos(ang) * r;
+      mp[i * 3 + 1] = 0.15 + Math.abs(Math.sin(t * 1.2 + i)) * 0.5;
+      mp[i * 3 + 2] = Math.sin(ang) * r;
+    }
+    this._motePoints.geometry.attributes.position.needsUpdate = true;
+    this._moteMat.opacity = 0.6 + Math.sin(t * 2.0) * 0.2 + burst * 0.3;
 
     // Background flowers: gentle sway + sprouting animation
     for (let i = 1; i < this.flowers.length; i++) {

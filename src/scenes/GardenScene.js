@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass }     from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { ShaderPass }     from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { OutputPass }     from "three/examples/jsm/postprocessing/OutputPass.js";
 import { SkyDome }        from "../systems/SkyDome.js";
 import { ParticleField }  from "../systems/ParticleField.js";
@@ -48,7 +49,10 @@ export class GardenScene {
 
     // ── Scene ────────────────────────────────────────────────────────────────
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.Fog(0x0a0e2a, 25, 90);
+    // Fog softens the horizon: the ground edge and distant hills dissolve into
+    // the sky haze instead of ending on a hard line. Colour is driven per-frame
+    // by DayNightCycle to match the horizon.
+    this.scene.fog = new THREE.Fog(0x9fb8e0, 34, 96);
 
     // ── Camera ───────────────────────────────────────────────────────────────
     this.camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
@@ -117,6 +121,7 @@ export class GardenScene {
     // ── Post-processing: bloom for the magical glow ──────────────────────────
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
+
     const bloomStrength = this.isMobile ? 0.55 : 0.85;
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
@@ -125,6 +130,49 @@ export class GardenScene {
       0.85,          // threshold — only bright/emissive areas bloom
     );
     this.composer.addPass(this.bloomPass);
+
+    // Warm, dreamy colour grade: a gentle saturation lift, a warm tint and a
+    // soft vignette to pull focus toward the centre. Cheap full-screen shader;
+    // toned down on mobile.
+    const grade = this.isMobile ? 0.5 : 1.0;
+    this.colorGradePass = new ShaderPass({
+      uniforms: {
+        tDiffuse:   { value: null },
+        uSaturation:{ value: 1.0 + 0.12 * grade },
+        uWarm:      { value: 0.05 * grade },
+        uVignette:  { value: 0.32 * grade },
+        uBright:    { value: 1.0 + 0.02 * grade },
+      },
+      vertexShader: /* glsl */`
+        varying vec2 vUv;
+        void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+      `,
+      fragmentShader: /* glsl */`
+        uniform sampler2D tDiffuse;
+        uniform float uSaturation;
+        uniform float uWarm;
+        uniform float uVignette;
+        uniform float uBright;
+        varying vec2 vUv;
+        void main() {
+          vec4 c = texture2D(tDiffuse, vUv);
+          // Saturation around luminance.
+          float l = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+          c.rgb = mix(vec3(l), c.rgb, uSaturation);
+          // Warm tint: lift reds, gently drop blues.
+          c.r += uWarm;
+          c.b -= uWarm * 0.6;
+          c.rgb *= uBright;
+          // Vignette.
+          vec2 d = vUv - 0.5;
+          float vig = smoothstep(0.85, 0.2, dot(d, d) * 2.4);
+          c.rgb *= mix(1.0 - uVignette, 1.0, vig);
+          gl_FragColor = vec4(clamp(c.rgb, 0.0, 1.0), c.a);
+        }
+      `,
+    });
+    this.composer.addPass(this.colorGradePass);
+
     this.composer.addPass(new OutputPass());
     this.composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.composer.setSize(window.innerWidth, window.innerHeight);
@@ -238,6 +286,7 @@ export class GardenScene {
       this.composer.setPixelRatio(pr);
       this.composer.setSize(w, h);
     }
+    if (this.bloomPass) this.bloomPass.setSize(w, h);
   }
 
   /** Release all GPU resources to avoid leaks when the scene is torn down */

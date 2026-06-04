@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { softCircleTexture } from "../systems/textures.js";
 
 /** Falling petal particle system — petals drift down from above */
 export class PetalParticles {
@@ -44,9 +45,11 @@ export class PetalParticles {
 
     const mat = new THREE.PointsMaterial({
       vertexColors: true,
-      size: 0.18,
+      map: softCircleTexture(),
+      alphaMap: softCircleTexture(),
+      size: 0.4,
       transparent: true,
-      opacity: 0.75,
+      opacity: 0.85,
       depthWrite: false,
       sizeAttenuation: true,
     });

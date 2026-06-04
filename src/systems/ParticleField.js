@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { softCircleTexture } from "./textures.js";
 
 /** Floating ambient dust / magical sparkle particles */
 export class ParticleField {
@@ -39,11 +40,14 @@ export class ParticleField {
 
     const mat = new THREE.PointsMaterial({
       vertexColors: true,
-      size: 0.12,
+      map: softCircleTexture(),
+      alphaMap: softCircleTexture(),
+      size: 0.32,
       transparent: true,
       opacity: 0.55,
       depthWrite: false,
-      sizeAttenuation: true
+      sizeAttenuation: true,
+      blending: THREE.AdditiveBlending
     });
 
     this.points = new THREE.Points(geo, mat);
