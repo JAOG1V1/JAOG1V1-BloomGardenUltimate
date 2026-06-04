@@ -189,6 +189,8 @@ export class GardenScene {
   resize(w, h) {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    // Re-apply pixel ratio so moving between displays (different DPR) stays crisp.
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(w, h);
   }
 
