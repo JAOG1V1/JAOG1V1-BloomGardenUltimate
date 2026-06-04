@@ -80,7 +80,7 @@ export class DayNightCycle {
 
     // Smooth manual transition state
     this._targetT = null;          // tween destination, or null when idle
-    this._tweenRate = 0.00045;     // day-fraction per ms while tweening (~1.5 s)
+    this._tweenRate = 0.00045;     // day-fraction per ms (worst case ~0.5 → ~1.1 s)
 
     this.nightFactor = 0; // exposed for FireflyField
   }

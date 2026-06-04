@@ -27,6 +27,8 @@ export class UI {
       if (fired) return;
       fired = true;
       if (e) e.preventDefault();
+      this.startButton.removeEventListener("pointerup", run);
+      this.startButton.removeEventListener("click", run);
       handler();
     };
     // pointerup covers mouse, touch and pen; click is the keyboard fallback.

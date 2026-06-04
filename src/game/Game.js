@@ -13,6 +13,7 @@ const SAP_PER_S          = 3.0;    // sap/sec at full energy (level 1)
 const SCORE_PER_S        = 2.0;    // passive score/sec at full energy (level 1)
 const SCORE_PER_CLICK    = 5;      // immediate score per click (× level)
 const LEVEL_SAP_BASE     = 120;    // sap to reach the next level (× level)
+const LEVEL_GROWTH_RATE  = 0.15;   // growth speed gained per level
 
 /**
  * Game — root class that wires together the scene, UI, save system, and loop.
@@ -117,7 +118,7 @@ export class Game {
   _update(dt, time) {
     const s    = this._state;
     const dt_s = dt / 1000;
-    const lvlMul = 1 + (s.level - 1) * 0.15; // higher level → faster growth
+    const lvlMul = 1 + (s.level - 1) * LEVEL_GROWTH_RATE; // higher level → faster growth
 
     // Energy: passive trickle up, steady decay down.
     s.energy += ENERGY_PASSIVE_PER_S * dt_s;
