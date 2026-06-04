@@ -157,8 +157,8 @@ export class DayNightCycle {
     // distant hills/sky instead of ending on a hard line. Warmer & lighter by
     // day, cool & dark at night.
     if (this._fog) {
-      const fogL = Math.min(0.78, p.skyL * 0.95 + 0.06);
-      this._fog.color.setHSL(p.skyH, p.skyS * 0.5, fogL);
+      const fogL = Math.min(0.72, p.skyL * 0.95 + 0.05);
+      this._fog.color.setHSL(p.skyH, p.skyS * 0.6, fogL);
     }
   }
 
