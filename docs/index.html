@@ -20,8 +20,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Cinzel:wght@400;700&display=swap" rel="stylesheet" />
-    <script type="module" crossorigin src="/JAOG1V1-BloomGardenUltimate/assets/index-to5xfzU-.js"></script>
-    <link rel="stylesheet" crossorigin href="/JAOG1V1-BloomGardenUltimate/assets/index-BJEC0LzU.css">
+    <script type="module" crossorigin src="/JAOG1V1-BloomGardenUltimate/assets/index-Bizbt-VP.js"></script>
+    <link rel="stylesheet" crossorigin href="/JAOG1V1-BloomGardenUltimate/assets/index-CDx2kwGM.css">
   </head>
   <body>
     <div id="app">
@@ -48,22 +48,22 @@
         <div class="hud glass" id="hud">
           <div class="hud-title">🌸 Bloom Garden</div>
           <div class="hud-grid">
-            <div class="hud-stat">
+            <div class="hud-stat" title="Pontos: a sua pontuação total e permanente. Você ganha pontos clicando na flor e deixando o jardim ativo. Gaste-os na Loja.">
               <span class="hud-icon">⭐</span>
               <span>Pontos</span>
               <span class="hud-val" id="score-value">0</span>
             </div>
-            <div class="hud-stat">
+            <div class="hud-stat" title="Seiva: a energia vital que o jardim acumula enquanto a flor está energizada. A seiva sobe o seu Nível e compra alguns upgrades.">
               <span class="hud-icon">💧</span>
               <span>Seiva</span>
               <span class="hud-val" id="sap-value">0</span>
             </div>
-            <div class="hud-stat">
+            <div class="hud-stat" title="Energia: o brilho da flor. Clique na flor para enchê-la. Com energia alta o jardim produz mais seiva e pontos. Ela cai aos poucos.">
               <span class="hud-icon">⚡</span>
               <span>Energia</span>
               <span class="hud-val" id="energy-value">0</span><span class="hud-unit">%</span>
             </div>
-            <div class="hud-stat">
+            <div class="hud-stat" title="Nível: o quanto o seu jardim cresceu. Acumule seiva para subir de nível — cada nível faz tudo florescer mais rápido.">
               <span class="hud-icon">🌿</span>
               <span>Nível</span>
               <span class="hud-val" id="level-value">1</span>
@@ -96,6 +96,7 @@
 
         <!-- ── Action buttons ── -->
         <div class="action-buttons" id="action-buttons">
+          <button class="action-btn glass" id="btn-help" title="Como Jogar">❔</button>
           <button class="action-btn glass" id="btn-shop" title="Loja / Upgrades">🛒</button>
           <button class="action-btn glass" id="btn-collection" title="Coleção & Conquistas">📖</button>
           <button class="action-btn glass" id="btn-day-night" title="Alternar Dia/Noite">🌙</button>
@@ -132,6 +133,7 @@
                 <span>Novo Jogo</span><span class="btn-glow" aria-hidden="true"></span>
               </button>
               <button id="btn-settings" type="button" class="menu-btn ghost">⚙️ Configurações</button>
+              <button id="btn-howto" type="button" class="menu-btn ghost">❔ Como Jogar</button>
               <button id="btn-credits" type="button" class="menu-btn ghost">✨ Créditos</button>
             </div>
 
@@ -161,6 +163,35 @@
               <button class="toggle" id="setting-quality" aria-pressed="false">Auto</button>
             </label>
             <button class="panel-danger" id="setting-reset">🗑️ Apagar progresso</button>
+          </div>
+
+          <!-- How to play -->
+          <div class="panel glass wide" id="howto-panel" data-panel="howto" hidden>
+            <button class="panel-close" data-close aria-label="Fechar">✕</button>
+            <h2>❔ Como Jogar</h2>
+            <div class="howto-body">
+              <p class="howto-lead">Cultive um jardim mágico vivo. O ciclo é simples:</p>
+              <div class="howto-loop">
+                <span>👆 Clique na flor</span><span class="howto-arrow">→</span>
+                <span>⚡ Energia</span><span class="howto-arrow">→</span>
+                <span>💧 Seiva</span><span class="howto-arrow">→</span>
+                <span>⭐ Pontos</span><span class="howto-arrow">→</span>
+                <span>🌿 Nível</span>
+              </div>
+              <ul class="howto-list">
+                <li><b>⚡ Energia</b> — clique (ou toque) na flor central para enchê-la de energia. Ela cai devagar, então continue clicando para manter o brilho.</li>
+                <li><b>💧 Seiva</b> — com energia alta, o jardim produz seiva automaticamente. Junte seiva para subir de <b>Nível</b>.</li>
+                <li><b>⭐ Pontos</b> — sua pontuação permanente. Ganhe pontos clicando e mantendo o jardim ativo; gaste-os na <b>Loja</b>.</li>
+                <li><b>🌿 Nível</b> — cada nível faz o jardim florescer mais rápido e desbloqueia novidades.</li>
+                <li><b>🔥 Combo</b> — clicar rápido aumenta o multiplicador e rende mais pontos por clique.</li>
+                <li><b>🛒 Loja</b> — compre upgrades (clique mais forte, energia que dura, abelhas, novas espécies e brilho mágico) com pontos e seiva.</li>
+                <li><b>🎁 Power-ups</b> — itens brilhantes aparecem no jardim. Clique neles para coletar: 🦋 dobra a energia, 🌧️ auto-clica, 🍄 explosão de seiva e ✨ bônus de pontos à noite.</li>
+                <li><b>🎯 Missões & 🏆 Conquistas</b> — veja seus objetivos e troféus em <b>Coleção</b> (📖).</li>
+                <li><b>🌙 Dia/Noite</b> — alterne o horário no botão da lua. À noite surgem vagalumes e power-ups especiais.</li>
+                <li><b>🖱️ Câmera</b> — arraste para girar, use a roda/pinça para dar zoom. Parada, a câmera orbita sozinha.</li>
+              </ul>
+            </div>
+            <button class="panel-cta" id="howto-tutorial">▶️ Refazer o tutorial guiado</button>
           </div>
 
           <!-- Credits -->
@@ -195,6 +226,20 @@
             <div class="collection-grid" id="species-grid"></div>
             <h3 class="panel-subtitle">🏆 Conquistas</h3>
             <div class="achievement-list" id="achievement-list"></div>
+          </div>
+        </div>
+
+        <!-- ── First-time guided tutorial ── -->
+        <div class="tutorial-overlay" id="tutorial-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tutorial-title">
+          <div class="tutorial-card glass">
+            <div class="tutorial-emoji" id="tutorial-emoji">🌸</div>
+            <h3 id="tutorial-title">Bem-vindo!</h3>
+            <p id="tutorial-text">Texto do tutorial.</p>
+            <div class="tutorial-dots" id="tutorial-dots" aria-hidden="true"></div>
+            <div class="tutorial-actions">
+              <button class="tutorial-skip" id="tutorial-skip" type="button">Pular</button>
+              <button class="tutorial-next" id="tutorial-next" type="button">Próximo →</button>
+            </div>
           </div>
         </div>
       </div>

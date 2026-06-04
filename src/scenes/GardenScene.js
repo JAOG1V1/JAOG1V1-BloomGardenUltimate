@@ -9,6 +9,7 @@ import { SkyDome }        from "../systems/SkyDome.js";
 import { ParticleField }  from "../systems/ParticleField.js";
 import { FlowerField }    from "../systems/FlowerField.js";
 import { DayNightCycle }  from "../world/DayNightCycle.js";
+import { Terrain, POND }   from "../world/Terrain.js";
 import { GrassField }     from "../world/GrassField.js";
 import { TreeField }      from "../world/TreeField.js";
 import { Pond }           from "../world/Pond.js";
@@ -88,13 +89,16 @@ export class GardenScene {
     this.scene.add(this.flowers.group);
 
     // ── World Elements ───────────────────────────────────────────────────────
+    // Terrain (rolling, vertex-coloured relief + dense ground cover + pond basin)
+    // must be created first so every other system can sit objects on its surface.
+    this.terrain = new Terrain(this.scene, this.isMobile);
     this.grass  = new GrassField(this.scene, q.grass);
     this.trees  = new TreeField(this.scene, q.trees);
     this.petals = new PetalParticles(this.scene, q.petals);
 
-    // Pond placed to one side
+    // Pond placed in its carved basin (centre/level shared via POND constants).
     this.pond = new Pond(this.scene);
-    this.pond.group.position.set(-10, 0, -8);
+    this.pond.group.position.set(POND.x, 0, POND.z);
 
     // ── Entities ─────────────────────────────────────────────────────────────
     this.mushrooms   = new MushroomField(this.scene, q.mushrooms);

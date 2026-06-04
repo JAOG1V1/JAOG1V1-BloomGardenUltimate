@@ -62,6 +62,7 @@ export class PowerUpField {
     this._maxActive = 2;
     this._lastTime = 0;
     this._nightFactor = 0;
+    this.onSpawn = null;    // optional callback(kind) → on-screen hint
   }
 
   setNightFactor(f) { this._nightFactor = f; }
@@ -95,6 +96,7 @@ export class PowerUpField {
 
     this._group.add(group);
     this._active.push({ kind, group, glow, emoji, life: 13, born: this._lastTime, baseY: group.position.y });
+    if (this.onSpawn) this.onSpawn(kind);
   }
 
   /** Raycast against active power-ups; collects + returns the kind, or null. */

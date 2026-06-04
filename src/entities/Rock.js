@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { terrainHeight, POND } from "../world/Terrain.js";
 
 const ROCK_COLORS = [0x888888, 0x6a6a78, 0x887755, 0x7a8088, 0x665544];
 
@@ -32,13 +33,16 @@ export class RockField {
       mesh.rotation.y = Math.random() * Math.PI * 2;
       mesh.rotation.z = (Math.random() - 0.5) * 0.3;
 
-      const angle = Math.random() * Math.PI * 2;
-      const dist  = 2.5 + Math.random() * 12;
-      mesh.position.set(
-        Math.cos(angle) * dist,
-        scale * 0.3,
-        Math.sin(angle) * dist,
-      );
+      let x = 0, z = 0;
+      for (let tries = 0; tries < 6; tries++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist  = 2.5 + Math.random() * 12;
+        x = Math.cos(angle) * dist;
+        z = Math.sin(angle) * dist;
+        if (Math.hypot(x - POND.x, z - POND.z) > POND.radius * 1.1) break;
+      }
+      // Sink the rock a touch into the ground so it reads as embedded, not resting on top.
+      mesh.position.set(x, terrainHeight(x, z) + scale * 0.18, z);
       mesh.castShadow    = true;
       mesh.receiveShadow = true;
 

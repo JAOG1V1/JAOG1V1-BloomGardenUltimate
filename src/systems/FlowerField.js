@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { SPECIES } from "./FlowerSpecies.js";
 import { glowDiscTexture, softCircleTexture } from "./textures.js";
+import { terrainHeight, POND } from "../world/Terrain.js";
 
 const SPECIES_BY_ID = Object.fromEntries(SPECIES.map(s => [s.id, s]));
 
@@ -48,17 +49,9 @@ export class FlowerField {
     // ── Background meadow ─────────────────────────────────────────────────────
     this._placeMeadow();
 
-    // ── Ground ────────────────────────────────────────────────────────────────
-    // A radial vertex-colour gradient (warm/lush at the centre fading to a
-    // cooler, lighter tone at the rim) helps the ground melt into the fog &
-    // distant hills instead of reading as a flat disc.
-    const groundGeo = new THREE.CircleGeometry(34, 96);
-    this._tintGround(groundGeo);
-    const groundMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    this.group.add(ground);
+    // NOTE: the ground itself is now provided by the dedicated Terrain system
+    // (rolling, vertex-coloured relief with a real pond basin), so FlowerField
+    // no longer draws a flat disc here.
 
     // ── Magical energy disc around the hero flower (bloom-friendly) ──────────
     // A soft additive radial glow (no hard ring → no black hole in the middle)
@@ -91,13 +84,13 @@ export class FlowerField {
     const rng = this._rng;
     const pool = SPECIES.filter(s => this._unlocked.has(s.id) && s.id !== "lotus");
 
-    // Lotus flowers near the pond.
+    // Lotus flowers near the pond — float them on the water surface.
     if (this._unlocked.has("lotus")) {
       for (let i = 0; i < 4; i++) {
         const angle = Math.PI + (i - 1.5) * 0.3;
-        const dist  = 9.5 + i * 0.5;
+        const dist  = 2.2 + i * 0.45;
         const f = SPECIES_BY_ID.lotus.build({ ...pick(COLOR_VARIANTS.lotus, rng), scale: 0.6 + i * 0.1 });
-        f.group.position.set(Math.cos(angle) * dist, 0.02, Math.sin(angle) * dist * 0.6);
+        f.group.position.set(POND.x + Math.cos(angle) * dist, POND.waterY + 0.04, POND.z + Math.sin(angle) * dist);
         f.group.rotation.y = rng() * Math.PI * 2;
         this._addFlower(f);
       }
@@ -113,7 +106,11 @@ export class FlowerField {
 
       const angle = rng() * Math.PI * 2;
       const dist  = 3.5 + rng() * 10;
-      f.group.position.set(Math.cos(angle) * dist, 0, Math.sin(angle) * dist * 0.65);
+      const x = Math.cos(angle) * dist;
+      const z = Math.sin(angle) * dist * 0.65;
+      // Keep flowers out of the pond water.
+      if (Math.hypot(x - POND.x, z - POND.z) < POND.radius * 1.05) continue;
+      f.group.position.set(x, terrainHeight(x, z), z);
       f.group.rotation.y = rng() * Math.PI * 2;
       this._addFlower(f);
     }
@@ -138,30 +135,17 @@ export class FlowerField {
       const f = SPECIES_BY_ID[id].build({ ...variant, scale: 0.55 + rng() * 0.35, stemHeight: 2.6 + rng() * 1.6 });
       const angle = rng() * Math.PI * 2;
       const dist  = 4 + rng() * 9;
-      f.group.position.set(Math.cos(angle) * dist, 0, Math.sin(angle) * dist * 0.65);
+      const x = Math.cos(angle) * dist;
+      const z = Math.sin(angle) * dist * 0.65;
+      const onWater = Math.hypot(x - POND.x, z - POND.z) < POND.radius * 1.05;
+      const y = onWater ? POND.waterY + 0.04 : terrainHeight(x, z);
+      f.group.position.set(x, y, z);
       f.group.rotation.y = rng() * Math.PI * 2;
       f.group.scale.setScalar(0.01); // sprout animation
       f._sprout = 0;
       this._addFlower(f);
     }
     return true;
-  }
-
-  // ─── Ground radial colour gradient ──────────────────────────────────────
-  _tintGround(geo) {
-    const pos = geo.attributes.position;
-    const colors = new Float32Array(pos.count * 3);
-    const inner = new THREE.Color(0x2f6b3a); // lush warm green at the centre
-    const outer = new THREE.Color(0x5a7d66); // lighter, cooler tone at the rim
-    const c = new THREE.Color();
-    const maxR = 34;
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i), y = pos.getY(i);
-      const f = Math.min(1, Math.sqrt(x * x + y * y) / maxR);
-      c.copy(inner).lerp(outer, f * f);
-      colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
-    }
-    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   }
 
   // ─── Orbiting sparkle motes for the energy disc ─────────────────────────

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { terrainHeight, POND } from "../world/Terrain.js";
 
 const MUSHROOM_PALETTES = [
   { cap: 0xff4444, spots: 0xffffff, stem: 0xf5deb3 },
@@ -74,13 +75,15 @@ export class MushroomField {
       const scale = 0.5 + Math.random() * 0.7;
       const m = buildMushroom(palette, scale);
 
-      const angle = Math.random() * Math.PI * 2;
-      const dist  = 3 + Math.random() * 11;
-      m.group.position.set(
-        Math.cos(angle) * dist,
-        0,
-        Math.sin(angle) * dist,
-      );
+      let x = 0, z = 0;
+      for (let tries = 0; tries < 6; tries++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist  = 3 + Math.random() * 11;
+        x = Math.cos(angle) * dist;
+        z = Math.sin(angle) * dist;
+        if (Math.hypot(x - POND.x, z - POND.z) > POND.radius * 1.1) break;
+      }
+      m.group.position.set(x, terrainHeight(x, z), z);
       m.group.rotation.y = Math.random() * Math.PI * 2;
 
       this.group.add(m.group);

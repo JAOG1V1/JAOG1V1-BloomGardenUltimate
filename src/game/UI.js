@@ -111,9 +111,10 @@ export class UI {
     }
   }
 
-  bindMenuActions({ onSettings, onCredits }) {
+  bindMenuActions({ onSettings, onCredits, onHowto }) {
     $("btn-settings")?.addEventListener("click", () => onSettings());
     $("btn-credits")?.addEventListener("click", () => onCredits());
+    $("btn-howto")?.addEventListener("click", () => onHowto && onHowto());
   }
 
   // ── Action buttons ─────────────────────────────────────────────────────────
@@ -121,6 +122,7 @@ export class UI {
   bindShopButton(handler)     { $("btn-shop")?.addEventListener("click", handler); }
   bindCollectionButton(handler) { $("btn-collection")?.addEventListener("click", handler); }
   bindSoundButton(handler)    { $("btn-sound")?.addEventListener("click", handler); }
+  bindHelpButton(handler)     { $("btn-help")?.addEventListener("click", handler); }
 
   setSoundIcon(muted) {
     const b = $("btn-sound");
@@ -307,5 +309,60 @@ export class UI {
         <span class="a-check">${earned ? "✅" : "🔒"}</span>`;
       list.appendChild(row);
     }
+  }
+
+  // ── Guided tutorial ─────────────────────────────────────────────────────────
+  /** Bind the "redo tutorial" button inside the How-to-play panel. */
+  bindHowtoTutorial(handler) {
+    $("howto-tutorial")?.addEventListener("click", () => handler && handler());
+  }
+
+  /**
+   * Show a short, step-by-step guided tutorial. `steps` is an array of
+   * { emoji, title, text }. `onDone` is called when the player finishes or skips.
+   */
+  showTutorial(steps, onDone) {
+    const overlay = $("tutorial-overlay");
+    if (!overlay || !steps || !steps.length) { if (onDone) onDone(); return; }
+
+    const emojiEl = $("tutorial-emoji");
+    const titleEl = $("tutorial-title");
+    const textEl  = $("tutorial-text");
+    const dotsEl  = $("tutorial-dots");
+    const nextBtn = $("tutorial-next");
+    const skipBtn = $("tutorial-skip");
+
+    dotsEl.innerHTML = steps.map(() => "<span></span>").join("");
+    let i = 0;
+    let finished = false;
+
+    const render = () => {
+      const s = steps[i];
+      emojiEl.textContent = s.emoji || "🌸";
+      titleEl.textContent = s.title || "";
+      textEl.textContent  = s.text || "";
+      dotsEl.querySelectorAll("span").forEach((d, k) => d.classList.toggle("on", k === i));
+      nextBtn.textContent = i === steps.length - 1 ? "Começar! 🌱" : "Próximo →";
+    };
+
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      overlay.hidden = true;
+      nextBtn.removeEventListener("click", onNext);
+      skipBtn.removeEventListener("click", finish);
+      if (onDone) onDone();
+    };
+
+    const onNext = () => {
+      if (i >= steps.length - 1) { finish(); return; }
+      i++; render();
+    };
+
+    nextBtn.addEventListener("click", onNext);
+    skipBtn.addEventListener("click", finish);
+
+    render();
+    overlay.hidden = false;
   }
 }

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { terrainHeight } from "./Terrain.js";
 
 /**
  * TreeField — stylised low-poly trees that ring the garden.
@@ -172,7 +173,10 @@ export class TreeField {
 
       const angle = (i / count) * Math.PI * 2 + (rng() - 0.5) * 0.5;
       const dist  = 19 + rng() * 13;
-      group.position.set(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
+      const x = Math.cos(angle) * dist;
+      const z = Math.sin(angle) * dist;
+      // Sit the trunk base on the terrain (sink slightly so roots read grounded).
+      group.position.set(x, terrainHeight(x, z) - 0.1, z);
       group.rotation.y = rng() * Math.PI * 2;
       const s = 0.85 + rng() * 0.5;
       group.scale.setScalar(s);
