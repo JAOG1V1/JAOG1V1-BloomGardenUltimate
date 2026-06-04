@@ -36,8 +36,14 @@
       <!-- ── Floating feedback layer (score pops) ── -->
       <div class="fx-layer" id="fx-layer" aria-hidden="true"></div>
 
+      <!-- ── Centre toast announcements (power-ups, level, achievements) ── -->
+      <div class="toast-layer" id="toast-layer" aria-live="polite"></div>
+
+      <!-- ── Fade used for the menu → scene transition ── -->
+      <div class="scene-fade" id="scene-fade" aria-hidden="true"></div>
+
       <div id="ui-root">
-        <!-- ── HUD ── -->
+        <!-- ── HUD (hidden until the player enters the garden) ── -->
         <div class="hud glass" id="hud">
           <div class="hud-title">🌸 Bloom Garden</div>
           <div class="hud-grid">
@@ -77,14 +83,23 @@
           </div>
         </div>
 
+        <!-- ── Combo meter ── -->
+        <div class="combo glass" id="combo-meter" aria-hidden="true">
+          <div class="combo-mult" id="combo-mult">x1</div>
+          <div class="combo-bar"><div class="combo-bar-fill" id="combo-bar-fill"></div></div>
+          <div class="combo-label">COMBO</div>
+        </div>
+
+        <!-- ── Active power-up badges ── -->
+        <div class="powerup-tray" id="powerup-tray" aria-live="polite"></div>
+
         <!-- ── Action buttons ── -->
         <div class="action-buttons" id="action-buttons">
-          <button class="action-btn glass" id="btn-day-night" title="Alternar Dia/Noite">
-            🌙
-          </button>
-          <button class="action-btn glass" id="btn-photo" title="Modo Foto">
-            📷
-          </button>
+          <button class="action-btn glass" id="btn-shop" title="Loja / Upgrades">🛒</button>
+          <button class="action-btn glass" id="btn-collection" title="Coleção & Conquistas">📖</button>
+          <button class="action-btn glass" id="btn-day-night" title="Alternar Dia/Noite">🌙</button>
+          <button class="action-btn glass" id="btn-sound" title="Som ligado/desligado">🔊</button>
+          <button class="action-btn glass" id="btn-photo" title="Modo Foto">📷</button>
         </div>
 
         <!-- ── Bottom message ── -->
@@ -94,6 +109,7 @@
 
         <!-- ── Menu overlay ── -->
         <div class="menu-overlay" id="menu-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+          <div class="menu-petals" id="menu-petals" aria-hidden="true"></div>
           <div class="menu-card glass">
             <div class="menu-logo" aria-hidden="true">🌸</div>
             <h1 id="menu-title">Bloom Garden<br /><span>Ultimate</span></h1>
@@ -101,6 +117,23 @@
               Um jardim mágico vivo, pronto para florescer.<br />
               Borboletas, vagalumes, cogumelos e muito mais aguardam você.
             </p>
+
+            <div class="menu-save" id="menu-save" hidden>
+              <span>🌿 Nível <b id="menu-save-level">1</b></span>
+              <span>⭐ <b id="menu-save-score">0</b> pontos</span>
+            </div>
+
+            <div class="menu-buttons">
+              <button id="btn-continue" type="button" class="menu-btn primary" hidden>
+                <span>Continuar</span><span class="btn-glow" aria-hidden="true"></span>
+              </button>
+              <button id="start-button" type="button" class="menu-btn primary" aria-label="Entrar no Jardim">
+                <span>Novo Jogo</span><span class="btn-glow" aria-hidden="true"></span>
+              </button>
+              <button id="btn-settings" type="button" class="menu-btn ghost">⚙️ Configurações</button>
+              <button id="btn-credits" type="button" class="menu-btn ghost">✨ Créditos</button>
+            </div>
+
             <div class="menu-legend" aria-hidden="true">
               <span>🦋 Borboletas</span>
               <span>🐝 Abelhas</span>
@@ -109,10 +142,58 @@
               <span>💧 Lagoa</span>
               <span>✨ Vagalumes</span>
             </div>
-            <button id="start-button" type="button" aria-label="Entrar no Jardim">
-              <span>Entrar no Jardim</span>
-              <span class="btn-glow" aria-hidden="true"></span>
-            </button>
+          </div>
+        </div>
+
+        <!-- ── Modal panels ── -->
+        <div class="panel-overlay" id="panel-overlay" hidden>
+          <!-- Settings -->
+          <div class="panel glass" id="settings-panel" data-panel="settings" hidden>
+            <button class="panel-close" data-close aria-label="Fechar">✕</button>
+            <h2>⚙️ Configurações</h2>
+            <label class="setting-row">
+              <span>🔊 Som & música</span>
+              <button class="toggle" id="setting-sound" aria-pressed="true">Ligado</button>
+            </label>
+            <label class="setting-row">
+              <span>🌸 Qualidade reduzida</span>
+              <button class="toggle" id="setting-quality" aria-pressed="false">Auto</button>
+            </label>
+            <button class="panel-danger" id="setting-reset">🗑️ Apagar progresso</button>
+          </div>
+
+          <!-- Credits -->
+          <div class="panel glass" id="credits-panel" data-panel="credits" hidden>
+            <button class="panel-close" data-close aria-label="Fechar">✕</button>
+            <h2>✨ Créditos</h2>
+            <p class="credits-body">
+              <b>Bloom Garden Ultimate</b><br />
+              Um jardim mágico feito com Three.js + Vite.<br /><br />
+              Arte low-poly, iluminação e brilho mágico, criaturas e
+              ciclo dia/noite — tudo em tempo real no seu navegador.<br /><br />
+              Feito com 💖 para você cultivar.
+            </p>
+          </div>
+
+          <!-- Shop -->
+          <div class="panel glass wide" id="shop-panel" data-panel="shop" hidden>
+            <button class="panel-close" data-close aria-label="Fechar">✕</button>
+            <h2>🛒 Loja & Upgrades</h2>
+            <div class="panel-balance">
+              <span>⭐ <b id="shop-score">0</b></span>
+              <span>💧 <b id="shop-sap">0</b></span>
+            </div>
+            <div class="shop-list" id="shop-list"></div>
+          </div>
+
+          <!-- Collection -->
+          <div class="panel glass wide" id="collection-panel" data-panel="collection" hidden>
+            <button class="panel-close" data-close aria-label="Fechar">✕</button>
+            <h2>📖 Coleção & Conquistas</h2>
+            <h3 class="panel-subtitle">🌷 Espécies</h3>
+            <div class="collection-grid" id="species-grid"></div>
+            <h3 class="panel-subtitle">🏆 Conquistas</h3>
+            <div class="achievement-list" id="achievement-list"></div>
           </div>
         </div>
       </div>

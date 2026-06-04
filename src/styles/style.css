@@ -51,6 +51,31 @@ body {
   pointer-events: none;
 }
 
+/* ─── HUD bug fix: in-game UI stays hidden until the player enters ─── */
+#ui-root .hud,
+#ui-root .combo,
+#ui-root .powerup-tray,
+#ui-root .action-buttons,
+#ui-root .bottom-message {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+#ui-root.in-game .hud,
+#ui-root.in-game .action-buttons,
+#ui-root.in-game .bottom-message {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Combo + power-up tray only appear when they have something to show */
+#ui-root.in-game .combo.active,
+#ui-root.in-game .powerup-tray.active {
+  opacity: 1;
+  visibility: visible;
+}
+
 /* ─── Photo mode: hide all informational HUD, keep only the exit control ─── */
 #ui-root.photo-mode .hud,
 #ui-root.photo-mode .bottom-message,
@@ -275,37 +300,10 @@ body {
   flex-wrap: wrap;
   gap: 8px 14px;
   justify-content: center;
-  margin-bottom: 24px;
+  margin-bottom: 4px;
   font-size: 13px;
   opacity: 0.7;
   font-weight: 500;
-}
-
-.menu-card button {
-  position: relative;
-  appearance: none;
-  border: 0;
-  border-radius: 18px;
-  padding: 15px 34px;
-  font-size: 17px;
-  font-weight: 700;
-  font-family: "Quicksand", sans-serif;
-  cursor: pointer;
-  color: white;
-  background: linear-gradient(135deg, #d63fc9, #ff6fb6, #ff9f43);
-  box-shadow: 0 10px 36px rgba(214, 63, 201, 0.42), 0 0 0 1px rgba(255,255,255,0.12);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  letter-spacing: 0.3px;
-  overflow: hidden;
-}
-
-.menu-card button:hover {
-  transform: translateY(-2px) scale(1.03);
-  box-shadow: 0 16px 48px rgba(214, 63, 201, 0.56), 0 0 0 1px rgba(255,255,255,0.18);
-}
-
-.menu-card button:active {
-  transform: scale(0.97);
 }
 
 .btn-glow {
@@ -429,6 +427,12 @@ body {
   100% { opacity: 0; transform: translate(-50%, -190%) scale(1); }
 }
 
+.fx-pop.combo {
+  font-size: 28px;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6), 0 0 18px rgba(255, 122, 233, 0.9);
+}
+
 /* ─── Keyboard focus accessibility ─── */
 #start-button:focus-visible,
 .action-btn:focus-visible {
@@ -483,4 +487,418 @@ body {
   .loading-bar-fill {
     animation: none;
   }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Redesigned menu, combo, power-ups, and modal panels
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Animated menu background + floating petals ─── */
+.menu-overlay {
+  background: linear-gradient(135deg, #3a1466 0%, #5b1d7a 25%, #2a1c66 50%, #142a6a 75%, #0a1444 100%);
+  background-size: 400% 400%;
+  animation: menuGradient 18s ease infinite;
+  overflow: hidden;
+}
+
+@keyframes menuGradient {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.menu-petals {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.menu-petals .petal {
+  position: absolute;
+  top: -40px;
+  font-size: 22px;
+  opacity: 0.8;
+  will-change: transform;
+  animation: petalFall linear infinite;
+}
+
+@keyframes petalFall {
+  0%   { transform: translateY(-40px) translateX(0) rotate(0deg); opacity: 0; }
+  10%  { opacity: 0.85; }
+  100% { transform: translateY(110vh) translateX(60px) rotate(360deg); opacity: 0; }
+}
+
+.menu-card {
+  position: relative;
+  z-index: 2;
+}
+
+/* ─── Menu buttons ─── */
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 6px 0 20px;
+}
+
+.menu-btn {
+  position: relative;
+  appearance: none;
+  border: 0;
+  border-radius: 16px;
+  padding: 14px 28px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: "Quicksand", sans-serif;
+  cursor: pointer;
+  color: white;
+  letter-spacing: 0.3px;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+}
+
+.menu-btn.primary {
+  background: linear-gradient(135deg, #d63fc9, #ff6fb6, #ff9f43);
+  box-shadow: 0 10px 32px rgba(214, 63, 201, 0.42), 0 0 0 1px rgba(255,255,255,0.12);
+}
+
+.menu-btn.primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 16px 44px rgba(214, 63, 201, 0.56), 0 0 0 1px rgba(255,255,255,0.18);
+}
+
+#btn-continue.primary {
+  background: linear-gradient(135deg, #3fd6a0, #6fd0ff, #c084fc);
+  box-shadow: 0 10px 32px rgba(63, 214, 160, 0.42), 0 0 0 1px rgba(255,255,255,0.12);
+}
+
+.menu-btn.ghost {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px 20px;
+}
+
+.menu-btn.ghost:hover {
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.menu-btn:active { transform: scale(0.97); }
+
+.menu-save {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin: 4px 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #c9f7df;
+}
+.menu-save b { color: #ffd166; }
+.menu-save[hidden] { display: none; }
+
+/* ─── Combo meter (top-centre) ─── */
+.combo {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 16px;
+  text-align: center;
+  min-width: 120px;
+}
+
+.combo-mult {
+  font-family: "Cinzel", serif;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  background: linear-gradient(90deg, #ffd166, #ff6fb6, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.combo-bar {
+  width: 100%;
+  height: 5px;
+  margin: 6px 0 3px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.combo-bar-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff6fb6, #ffd166);
+  transition: width 100ms linear;
+}
+
+.combo-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+.combo.bump { animation: comboBump 0.25s ease; }
+@keyframes comboBump {
+  0% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.12); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+/* ─── Power-up badges ─── */
+.powerup-tray {
+  position: absolute;
+  bottom: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.powerup-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  animation: badgeIn 0.3s ease;
+}
+.powerup-badge .pb-icon { font-size: 18px; }
+.powerup-badge .pb-time { color: var(--accent-2); font-variant-numeric: tabular-nums; }
+@keyframes badgeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ─── Modal panels ─── */
+.panel-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgba(5, 8, 22, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  pointer-events: auto;
+  padding: 16px;
+}
+.panel-overlay[hidden] { display: none; }
+
+.panel {
+  position: relative;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  border-radius: 24px;
+  padding: 24px 24px 22px;
+  animation: fadeScaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+.panel.wide { width: min(560px, calc(100vw - 32px)); }
+.panel[hidden] { display: none; }
+
+.panel h2 {
+  font-family: "Cinzel", serif;
+  margin: 0 0 16px;
+  font-size: 22px;
+}
+.panel-subtitle {
+  margin: 18px 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.panel-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+}
+.panel-close:hover { background: rgba(255,255,255,0.18); }
+
+.panel-balance {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 14px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.panel-balance b { color: var(--accent-2); }
+
+/* Settings */
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  font-size: 15px;
+  font-weight: 600;
+}
+.toggle {
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(126, 240, 181, 0.18);
+  color: #c9f7df;
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: "Quicksand", sans-serif;
+}
+.toggle[aria-pressed="false"] {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.6);
+}
+.panel-danger {
+  margin-top: 18px;
+  width: 100%;
+  border: 1px solid rgba(255, 110, 110, 0.4);
+  background: rgba(255, 80, 80, 0.14);
+  color: #ffb0b0;
+  border-radius: 14px;
+  padding: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: "Quicksand", sans-serif;
+}
+.panel-danger:hover { background: rgba(255, 80, 80, 0.24); }
+
+.credits-body { font-size: 14px; line-height: 1.7; opacity: 0.9; }
+
+/* Shop */
+.shop-list { display: flex; flex-direction: column; gap: 10px; }
+.shop-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.shop-item .si-icon { font-size: 26px; }
+.shop-item .si-body { flex: 1; min-width: 0; }
+.shop-item .si-name { font-weight: 700; font-size: 14px; }
+.shop-item .si-desc { font-size: 12px; opacity: 0.75; line-height: 1.4; }
+.shop-item .si-level { font-size: 11px; opacity: 0.6; }
+.shop-buy {
+  border: 0;
+  border-radius: 12px;
+  padding: 9px 14px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: "Quicksand", sans-serif;
+  color: #fff;
+  background: linear-gradient(135deg, #d63fc9, #ff6fb6);
+  white-space: nowrap;
+}
+.shop-buy:disabled { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.4); cursor: not-allowed; }
+.shop-buy.maxed { background: rgba(126,240,181,0.2); color: #c9f7df; }
+
+/* Collection */
+.collection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 10px;
+}
+.species-cell {
+  text-align: center;
+  padding: 10px 4px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.species-cell.locked { opacity: 0.4; filter: grayscale(1); }
+.species-cell .sc-emoji { font-size: 28px; }
+.species-cell .sc-name { font-size: 11px; font-weight: 600; margin-top: 4px; }
+
+.achievement-list { display: flex; flex-direction: column; gap: 8px; }
+.achievement {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  font-size: 13px;
+}
+.achievement.locked { opacity: 0.45; }
+.achievement .a-icon { font-size: 20px; }
+.achievement .a-name { font-weight: 700; }
+.achievement .a-desc { font-size: 11px; opacity: 0.75; }
+.achievement .a-check { margin-left: auto; font-size: 16px; }
+
+/* ─── Toast (centre announcements: power-ups, level, achievements) ─── */
+.toast-layer {
+  position: fixed;
+  top: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+}
+.toast {
+  padding: 10px 18px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid rgba(255,255,255,0.18);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  animation: toastInOut 3s ease forwards;
+}
+@keyframes toastInOut {
+  0% { opacity: 0; transform: translateY(-12px) scale(0.9); }
+  12% { opacity: 1; transform: none; }
+  85% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-8px); }
+}
+
+/* ─── Transition fade between menu and scene ─── */
+.scene-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 48;
+  background: #05060f;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+.scene-fade.show { opacity: 1; }
+
+@media (max-width: 480px) {
+  .action-btn { width: 40px; height: 40px; font-size: 16px; border-radius: 12px; }
+  .combo { top: 10px; padding: 6px 12px; min-width: 100px; }
+  .combo-mult { font-size: 22px; }
 }

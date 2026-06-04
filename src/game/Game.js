@@ -1,6 +1,14 @@
 import { GardenScene } from "../scenes/GardenScene.js";
 import { SaveSystem }  from "./SaveSystem.js";
 import { UI }          from "./UI.js";
+import { Sound }       from "./Sound.js";
+import { ACHIEVEMENTS } from "./Achievements.js";
+import {
+  UPGRADE_BY_ID, LOCKED_SPECIES,
+  upgradeLevel, upgradeCost, upgradeValue,
+} from "./Upgrades.js";
+import { SPECIES } from "../systems/FlowerSpecies.js";
+import { POWERUP_KINDS } from "../entities/PowerUp.js";
 
 // ── Economy tuning ───────────────────────────────────────────────────────────
 // The loop reads as: click → ENERGY, ENERGY → SEIVA (sap), SEIVA → NÍVEL,
@@ -15,8 +23,19 @@ const SCORE_PER_CLICK    = 5;      // immediate score per click (× level)
 const LEVEL_SAP_BASE     = 120;    // sap to reach the next level (× level)
 const LEVEL_GROWTH_RATE  = 0.15;   // growth speed gained per level
 
+// ── Combo tuning ─────────────────────────────────────────────────────────────
+const COMBO_WINDOW_S   = 1.4;      // time before the combo decays
+const COMBO_PER_TIER   = 4;        // quick clicks needed per +1 multiplier
+const COMBO_MAX        = 8;        // multiplier cap
+
+// ── Power-up tuning ──────────────────────────────────────────────────────────
+const BUTTERFLY_S = 30;            // butterfly: ×2 energy per click
+const RAIN_S      = 12;            // rain: auto-click duration
+const RAIN_TICK_S = 0.45;          // auto-click cadence
+
 /**
- * Game — root class that wires together the scene, UI, save system, and loop.
+ * Game — root class that wires together the scene, UI, save system, sound,
+ * combo, power-ups, shop and achievements.
  */
 export class Game {
   constructor(canvas) {
@@ -26,9 +45,20 @@ export class Game {
     this._scene  = null; // created after menu start
 
     this._state = this._save.load();
+    this._sound = new Sound(!this._state.settings.sound);
+
     this._lastSave = 0;
     this._running  = false;
     this._lastTime = 0;
+
+    // Combo state
+    this._comboHits  = 0;
+    this._comboTimer = 0;
+    this._comboMult  = 1;
+
+    // Active timed power-ups (seconds remaining)
+    this._fx = { butterfly: 0, rain: 0 };
+    this._rainAccum = 0;
 
     this._setup();
   }
@@ -36,11 +66,30 @@ export class Game {
   // ── Bootstrap ─────────────────────────────────────────────────────────────
 
   _setup() {
-    this._ui.setMenuVisible(true);
-    this._ui.setHUD(this._state, this._levelProgress());
-    this._ui.setMessage("🌸 Bem-vindo ao Bloom Garden Ultimate!");
+    const s = this._state;
+    const hasSave = this._save.hasSave();
 
-    this._ui.bindStart(() => this._startGame());
+    this._ui.setMenuVisible(true);
+    this._ui.showSaveInfo(s, hasSave);
+    this._ui.setSoundIcon(this._sound.muted);
+    this._ui.setSettingSound(s.settings.sound);
+    this._ui.setSettingQuality(s.settings.lowQuality);
+    this._ui.bindPanels();
+
+    // ── Menu buttons ──────────────────────────────────────────────────────────
+    this._ui.bindStart(() => this._startGame(!hasSave)); // "Novo Jogo" when no save
+    this._ui.bindContinue(() => this._startGame(false));
+    this._ui.bindMenuActions({
+      onSettings: () => this._ui.openPanel("settings"),
+      onCredits:  () => this._ui.openPanel("credits"),
+    });
+
+    // ── Settings (work from the menu too) ─────────────────────────────────────
+    this._ui.bindSettings({
+      onSound:   () => this._toggleSound(),
+      onQuality: () => this._toggleQuality(),
+      onReset:   () => this._resetProgress(),
+    });
 
     // Persist progress when the tab is closed or hidden (mobile-safe).
     this._persist = () => this._save.save(this._state);
@@ -50,7 +99,17 @@ export class Game {
     });
   }
 
-  _startGame() {
+  _startGame(fresh) {
+    if (fresh) {
+      this._state = this._save.reset();
+      this._sound.setMuted(!this._state.settings.sound);
+    }
+
+    this._sound.resume();
+    if (this._state.settings.sound) this._sound.startAmbient();
+
+    // Smooth fade out of the menu into the loading screen.
+    this._ui.fade(true);
     this._ui.setMenuVisible(false);
     this._ui.setLoadingVisible(true);
     this._ui.setMessage("Clique na flor para energizar o jardim ✨");
@@ -61,8 +120,15 @@ export class Game {
   }
 
   _buildScene() {
-    // Build Three.js scene
-    this._scene = new GardenScene(this._canvas);
+    const s = this._state;
+
+    // Build Three.js scene with the player's unlocked species + quality choice.
+    this._scene = new GardenScene(this._canvas, {
+      unlocked: s.unlockedSpecies,
+      lowQuality: s.settings.lowQuality,
+    });
+    this._scene.setBloomBoost(upgradeValue(s, "decor"));
+
     this._resizeObserver = new ResizeObserver(() => this._onResize());
     this._resizeObserver.observe(document.documentElement);
     this._onResize();
@@ -70,15 +136,21 @@ export class Game {
     // Pointer interaction (pointerdown unifies mouse, touch and pen)
     this._canvas.addEventListener("pointerdown", e => this._onPointer(e));
 
-    // Day/Night toggle (smooth) + Photo mode
-    this._ui.bindDayNightToggle(() => {
-      if (this._scene) this._scene.toggleDayNight();
-    });
+    // Action buttons
+    this._ui.bindDayNightToggle(() => { if (this._scene) this._scene.toggleDayNight(); });
+    this._ui.bindShopButton(() => this._openShop());
+    this._ui.bindCollectionButton(() => this._openCollection());
+    this._ui.bindSoundButton(() => this._toggleSound());
     this._ui.bindPhotoMode(null);
 
     // First render, then reveal the world.
     this._scene.update(performance.now());
+    this._ui.setInGame(true);
     this._ui.setLoadingVisible(false);
+    this._ui.fade(false);
+
+    // Welcome toast only AFTER entering (never on the menu).
+    this._ui.toast("🌸 Bem-vindo ao seu jardim!");
 
     // Start loop
     this._running = true;
@@ -120,17 +192,49 @@ export class Game {
     const dt_s = dt / 1000;
     const lvlMul = 1 + (s.level - 1) * LEVEL_GROWTH_RATE; // higher level → faster growth
 
-    // Energy: passive trickle up, steady decay down.
-    s.energy += ENERGY_PASSIVE_PER_S * dt_s;
-    s.energy  = Math.max(0, Math.min(100, s.energy - ENERGY_DECAY_PER_S * dt_s));
+    // ── Combo decay ───────────────────────────────────────────────────────────
+    if (this._comboMult > 1) {
+      this._comboTimer -= dt_s;
+      if (this._comboTimer <= 0) {
+        this._comboHits = 0;
+        this._comboMult = 1;
+        this._ui.hideCombo();
+      } else {
+        this._ui.setCombo(this._comboMult, this._comboTimer / COMBO_WINDOW_S);
+      }
+    }
+
+    // ── Timed power-ups ───────────────────────────────────────────────────────
+    let fxChanged = false;
+    for (const k of Object.keys(this._fx)) {
+      if (this._fx[k] > 0) {
+        this._fx[k] = Math.max(0, this._fx[k] - dt_s);
+        fxChanged = true;
+      }
+    }
+    if (this._fx.rain > 0) {
+      this._rainAccum += dt_s;
+      while (this._rainAccum >= RAIN_TICK_S) {
+        this._rainAccum -= RAIN_TICK_S;
+        this._autoClick();
+      }
+    }
+    if (fxChanged) this._refreshPowerupBadges();
+
+    // ── Energy: passive trickle up, steady decay down (energy upgrade slows it).
+    const energyLvl = upgradeValue(s, "energy");
+    s.energy += (ENERGY_PASSIVE_PER_S + energyLvl * 0.15) * dt_s;
+    const decay = Math.max(0.4, ENERGY_DECAY_PER_S - energyLvl * 0.12);
+    s.energy  = Math.max(0, Math.min(100, s.energy - decay * dt_s));
 
     const energyFrac = s.energy / 100;
 
-    // Energy → seiva (sap) and permanent pontos (score).
-    s.sap   += SAP_PER_S   * energyFrac * lvlMul * dt_s;
+    // ── Energy → seiva (sap) and permanent pontos (score). Bees add passive sap.
+    const beeSap = upgradeValue(s, "bees");
+    s.sap   += (SAP_PER_S * energyFrac * lvlMul + beeSap) * dt_s;
     s.score += SCORE_PER_S * energyFrac * lvlMul * dt_s;
 
-    // Seiva → nível (spend sap to grow the garden a level).
+    // ── Seiva → nível (spend sap to grow the garden a level).
     let leveled = false;
     while (s.sap >= this._sapReq()) {
       s.sap -= this._sapReq();
@@ -140,13 +244,27 @@ export class Game {
     if (leveled) {
       this._save.save(s); // persist milestones immediately
       this._ui.setMessage(`🌟 Nível ${s.level} alcançado! O jardim floresce mais forte!`);
+      this._ui.toast(`🌟 Nível ${s.level}!`);
+      this._sound.levelUp();
       if (this._scene) this._scene.energize();
+      this._checkAchievements();
     }
 
     this._ui.setHUD(s, this._levelProgress());
 
-    // Update time display
-    if (this._scene) this._ui.setTimeLabel(this._scene.timeLabel);
+    // ── Time display + night fireflies bonus ──────────────────────────────────
+    if (this._scene) {
+      this._ui.setTimeLabel(this._scene.timeLabel);
+      const night = this._scene.nightFactor;
+      if (night > 0.6) {
+        if (!s.stats.sawFireflies) {
+          s.stats.sawFireflies = true;
+          this._checkAchievements();
+        }
+        // Gentle night-time score bonus from the fireflies.
+        s.score += 0.8 * lvlMul * dt_s;
+      }
+    }
   }
 
   // ── Interaction ──────────────────────────────────────────────────────────
@@ -157,28 +275,196 @@ export class Game {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     const hit = this._scene.handlePointer(x, y, rect.width, rect.height);
+    if (!hit) return;
 
-    if (hit) {
-      const s = this._state;
-      s.energy = Math.min(100, s.energy + ENERGY_CLICK);
-      s.totalClicks++;
+    if (hit.type === "powerup") {
+      this._collectPowerUp(hit.kind, e.clientX, e.clientY);
+      return;
+    }
 
-      // Immediate, satisfying score reward (scales with level).
-      const gain = SCORE_PER_CLICK * s.level;
-      s.score += gain;
+    // Flower click
+    this._registerCombo();
+    const s = this._state;
+    const energyGain = ENERGY_CLICK * (this._fx.butterfly > 0 ? 2 : 1);
+    s.energy = Math.min(100, s.energy + energyGain);
+    s.totalClicks++;
 
-      // Floating "+N" feedback at the touch/click point.
-      this._ui.floatText(e.clientX, e.clientY, `+${gain}`);
-      this._ui.setHUD(s, this._levelProgress());
+    // Immediate score reward (scales with level, click upgrade and combo).
+    const base = SCORE_PER_CLICK * s.level + upgradeValue(s, "click");
+    const gain = Math.round(base * this._comboMult);
+    s.score += gain;
 
-      const msgs = [
-        "✨ A flor absorveu sua energia!",
-        "🌸 O jardim vibra com sua presença!",
-        "💫 Partículas mágicas dançam ao redor!",
-        "🌿 As pétalas brilham mais forte!",
-        "⚡ Energia liberada — o jardim agradece!"
-      ];
-      this._ui.setMessage(msgs[s.totalClicks % msgs.length]);
+    this._ui.floatText(e.clientX, e.clientY, `+${gain}`, this._comboMult > 1 ? "combo" : "");
+    this._ui.setHUD(s, this._levelProgress());
+    this._sound.click();
+    this._checkAchievements();
+  }
+
+  /** A simulated click from the Rain power-up (no combo, no sound spam). */
+  _autoClick() {
+    const s = this._state;
+    s.energy = Math.min(100, s.energy + ENERGY_CLICK);
+    s.totalClicks++;
+    s.score += SCORE_PER_CLICK * s.level + upgradeValue(s, "click");
+    this._ui.setHUD(s, this._levelProgress());
+    if (this._scene) this._scene.energize();
+  }
+
+  _registerCombo() {
+    this._comboHits++;
+    this._comboTimer = COMBO_WINDOW_S;
+    const mult = Math.min(1 + Math.floor(this._comboHits / COMBO_PER_TIER), COMBO_MAX);
+    if (mult !== this._comboMult) {
+      this._comboMult = mult;
+      this._ui.bumpCombo();
+    }
+    this._state.stats.maxCombo = Math.max(this._state.stats.maxCombo || 0, this._comboMult);
+    if (this._comboMult > 1) this._ui.setCombo(this._comboMult, 1);
+  }
+
+  // ── Power-ups ──────────────────────────────────────────────────────────────
+
+  _collectPowerUp(kind, sx, sy) {
+    const s = this._state;
+    s.stats.powerupsCollected = (s.stats.powerupsCollected || 0) + 1;
+    this._sound.collect();
+    const def = POWERUP_KINDS[kind];
+
+    switch (kind) {
+      case "butterfly":
+        this._fx.butterfly = BUTTERFLY_S;
+        this._ui.toast(`${def.emoji} Borboleta Dourada — energia dobrada por ${BUTTERFLY_S}s!`);
+        break;
+      case "rain":
+        this._fx.rain = RAIN_S;
+        this._ui.toast(`${def.emoji} Nuvem de Chuva — auto-clique por ${RAIN_S}s!`);
+        break;
+      case "mushroom": {
+        const burst = Math.round(this._sapReq() * 0.4 + 30);
+        s.sap += burst;
+        this._ui.floatText(sx, sy, `+${burst} 💧`, "combo");
+        this._ui.toast(`${def.emoji} Cogumelo Mágico — explosão de seiva!`);
+        if (this._scene) this._scene.energize();
+        break;
+      }
+      case "fireflies": {
+        const bonus = 150 * s.level;
+        s.score += bonus;
+        s.stats.sawFireflies = true;
+        this._ui.floatText(sx, sy, `+${bonus} ⭐`, "combo");
+        this._ui.toast(`${def.emoji} Enxame de Vagalumes — bônus de pontos!`);
+        break;
+      }
+    }
+
+    this._refreshPowerupBadges();
+    this._ui.setHUD(s, this._levelProgress());
+    this._checkAchievements();
+  }
+
+  _refreshPowerupBadges() {
+    const list = [];
+    if (this._fx.butterfly > 0) list.push({ icon: POWERUP_KINDS.butterfly.emoji, time: this._fx.butterfly });
+    if (this._fx.rain > 0)      list.push({ icon: POWERUP_KINDS.rain.emoji, time: this._fx.rain });
+    this._ui.setPowerups(list);
+  }
+
+  // ── Shop ─────────────────────────────────────────────────────────────────
+
+  _openShop() {
+    this._ui.renderShop(this._state, id => this._buyUpgrade(id));
+    this._ui.openPanel("shop");
+  }
+
+  _buyUpgrade(id) {
+    const s = this._state;
+    const u = UPGRADE_BY_ID[id];
+    const lvl = upgradeLevel(s, id);
+    if (lvl >= u.max) return;
+    const cost = upgradeCost(u, lvl);
+
+    if (u.currency === "sap") {
+      if (s.sap < cost) return;
+      s.sap -= cost;
+    } else {
+      if (s.score < cost) return;
+      s.score -= cost;
+    }
+
+    s.upgrades[id] = lvl + 1;
+    this._sound.collect();
+
+    // Apply side-effects for upgrades that change the scene immediately.
+    if (id === "species") this._unlockNextSpecies();
+    if (id === "decor" && this._scene) this._scene.setBloomBoost(upgradeValue(s, "decor"));
+
+    this._save.save(s);
+    this._ui.renderShop(s, uid => this._buyUpgrade(uid));
+    this._ui.setHUD(s, this._levelProgress());
+    this._checkAchievements();
+  }
+
+  _unlockNextSpecies() {
+    const s = this._state;
+    const next = LOCKED_SPECIES.find(id => !s.unlockedSpecies.includes(id));
+    if (!next) return;
+    s.unlockedSpecies.push(next);
+    if (this._scene && this._scene.flowers) this._scene.flowers.unlockSpecies(next);
+    const sp = SPECIES.find(x => x.id === next);
+    if (sp) this._ui.toast(`${sp.emoji} Nova espécie desbloqueada: ${sp.name}!`);
+  }
+
+  // ── Collection ─────────────────────────────────────────────────────────────
+
+  _openCollection() {
+    this._ui.renderCollection(this._state);
+    this._ui.openPanel("collection");
+  }
+
+  // ── Achievements ───────────────────────────────────────────────────────────
+
+  _checkAchievements() {
+    const s = this._state;
+    const ctx = { maxCombo: this._comboMult };
+    for (const a of ACHIEVEMENTS) {
+      if (s.achievements.includes(a.id)) continue;
+      if (a.check(s, ctx)) {
+        s.achievements.push(a.id);
+        this._ui.toast(`🏆 Conquista: ${a.name}!`);
+        this._sound.levelUp();
+      }
+    }
+  }
+
+  // ── Settings ───────────────────────────────────────────────────────────────
+
+  _toggleSound() {
+    const s = this._state;
+    s.settings.sound = !s.settings.sound;
+    this._sound.setMuted(!s.settings.sound);
+    if (s.settings.sound) { this._sound.resume(); this._sound.startAmbient(); }
+    this._ui.setSoundIcon(this._sound.muted);
+    this._ui.setSettingSound(s.settings.sound);
+    this._save.save(s);
+  }
+
+  _toggleQuality() {
+    const s = this._state;
+    s.settings.lowQuality = !s.settings.lowQuality;
+    this._ui.setSettingQuality(s.settings.lowQuality);
+    this._save.save(s);
+    if (this._scene) this._ui.toast("⚙️ A qualidade muda ao recarregar o jardim.");
+  }
+
+  _resetProgress() {
+    this._state = this._save.reset();
+    this._sound.setMuted(!this._state.settings.sound);
+    this._ui.closePanel();
+    this._ui.toast("🗑️ Progresso apagado.");
+    this._ui.setHUD(this._state, this._levelProgress());
+    this._ui.showSaveInfo(this._state, false);
+    if (this._scene && this._scene.flowers) {
+      this._ui.renderCollection(this._state);
     }
   }
 
