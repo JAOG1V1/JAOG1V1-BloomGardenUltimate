@@ -1,4 +1,8 @@
 import * as THREE from "three";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass }     from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { OutputPass }     from "three/examples/jsm/postprocessing/OutputPass.js";
 import { SkyDome }        from "../systems/SkyDome.js";
 import { ParticleField }  from "../systems/ParticleField.js";
 import { FlowerField }    from "../systems/FlowerField.js";
@@ -18,14 +22,14 @@ import { RockField }      from "../entities/Rock.js";
  * Call update(time) every frame and resize(w, h) on canvas resize.
  */
 export class GardenScene {
-  constructor(canvas) {
+  constructor(canvas, { unlocked } = {}) {
     // ── Device quality tier ──────────────────────────────────────────────────
     const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
     const smallScreen = Math.min(window.innerWidth, window.innerHeight) < 760;
     this.isMobile = coarse || smallScreen;
     const q = this.isMobile
-      ? { grass: 600, petals: 40, particles: 300, fireflies: 10, mushrooms: 8, rocks: 8, butterflies: 5, trees: 6, shadows: false }
-      : { grass: 1600, petals: 100, particles: 800, fireflies: 18, mushrooms: 12, rocks: 14, butterflies: 8, trees: 8, shadows: true };
+      ? { grass: 1100, petals: 40, particles: 300, fireflies: 10, mushrooms: 8, rocks: 8, butterflies: 5, trees: 6, shadows: false }
+      : { grass: 2800, petals: 100, particles: 800, fireflies: 18, mushrooms: 12, rocks: 14, butterflies: 8, trees: 8, shadows: true };
     this._q = q;
 
     // ── Renderer ────────────────────────────────────────────────────────────
@@ -51,16 +55,15 @@ export class GardenScene {
     this.camera.lookAt(0, 2.5, 0);
 
     // ── Base Lighting ────────────────────────────────────────────────────────
-    this._ambient = new THREE.AmbientLight(0x8090d0, 1.1);
+    // Ambient is kept low and driven by the day/night cycle; a HemisphereLight
+    // (sky tint above, ground bounce below) gives the low-poly look its soft,
+    // coherent shading.
+    this._ambient = new THREE.AmbientLight(0x8090d0, 0.45);
     this.scene.add(this._ambient);
 
-    const fillLight = new THREE.PointLight(0xff8bd0, 1.2, 30);
-    fillLight.position.set(-4, 4, 6);
-    this.scene.add(fillLight);
-
-    const rimLight = new THREE.PointLight(0x7ef0b5, 0.8, 24);
-    rimLight.position.set(6, 3, -4);
-    this.scene.add(rimLight);
+    this._hemi = new THREE.HemisphereLight(0xbcd6ff, 0x33502f, 0.9);
+    this._hemi.position.set(0, 30, 0);
+    this.scene.add(this._hemi);
 
     // ── Sky ──────────────────────────────────────────────────────────────────
     this.sky = new SkyDome();
@@ -74,7 +77,7 @@ export class GardenScene {
     this.particles = new ParticleField(q.particles);
     this.scene.add(this.particles.points);
 
-    this.flowers = new FlowerField();
+    this.flowers = new FlowerField({ unlocked });
     this.scene.add(this.flowers.group);
 
     // ── World Elements ───────────────────────────────────────────────────────
@@ -106,6 +109,21 @@ export class GardenScene {
     this._camAngle  = 0;
     this._camTarget = new THREE.Vector3(0, 2.5, 0);
     this._lastTime  = 0;
+
+    // ── Post-processing: bloom for the magical glow ──────────────────────────
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    const bloomStrength = this.isMobile ? 0.55 : 0.85;
+    this.bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      bloomStrength, // strength
+      0.6,           // radius
+      0.85,          // threshold — only bright/emissive areas bloom
+    );
+    this.composer.addPass(this.bloomPass);
+    this.composer.addPass(new OutputPass());
+    this.composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.composer.setSize(window.innerWidth, window.innerHeight);
   }
 
   /** Called from Game on pointer events — returns true if flower was hit */
@@ -182,7 +200,7 @@ export class GardenScene {
     this.camera.position.z = Math.cos(this._camAngle) * r;
     this.camera.lookAt(this._camTarget);
 
-    this.renderer.render(this.scene, this.camera);
+    this.composer.render();
   }
 
   /** Handle window resize */
@@ -190,8 +208,13 @@ export class GardenScene {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     // Re-apply pixel ratio so moving between displays (different DPR) stays crisp.
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const pr = Math.min(window.devicePixelRatio, 2);
+    this.renderer.setPixelRatio(pr);
     this.renderer.setSize(w, h);
+    if (this.composer) {
+      this.composer.setPixelRatio(pr);
+      this.composer.setSize(w, h);
+    }
   }
 
   /** Release all GPU resources to avoid leaks when the scene is torn down */
@@ -212,6 +235,7 @@ export class GardenScene {
     });
 
     this.scene.clear();
+    if (this.composer) this.composer.dispose();
     this.renderer.dispose();
   }
 }

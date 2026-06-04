@@ -23,19 +23,19 @@ export class SkyDome {
       const mat = new THREE.MeshBasicMaterial({
         color: bandColors[i % bandColors.length],
         transparent: true,
-        opacity: 0.055 + Math.random() * 0.035,
+        opacity: 0.03 + Math.random() * 0.02,
         depthWrite: false,
         side: THREE.DoubleSide
       });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(
         (Math.random() - 0.5) * 22,
-        12 + Math.random() * 10,
-        -22 - i * 2.5
+        16 + Math.random() * 12,
+        -28 - i * 2.5
       );
       mesh.rotation.x = -0.3 - Math.random() * 0.2;
       this.group.add(mesh);
-      this.bands.push({ mesh, speed: 0.0002 + Math.random() * 0.0003, phase: Math.random() * Math.PI * 2, baseOpacity: 0.055 + Math.random() * 0.035 });
+      this.bands.push({ mesh, speed: 0.0002 + Math.random() * 0.0003, phase: Math.random() * Math.PI * 2, baseOpacity: 0.03 + Math.random() * 0.02 });
     }
 
     // Star field
