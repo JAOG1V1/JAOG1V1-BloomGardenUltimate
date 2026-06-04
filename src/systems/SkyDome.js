@@ -46,7 +46,7 @@ export class SkyDome {
         topColor:     { value: this._topColor },
         horizonColor: { value: this._horizonColor },
         offset:       { value: 8.0 },
-        exponent:     { value: 0.5 },
+        exponent:     { value: 0.7 },
       },
       vertexShader: /* glsl */`
         varying vec3 vWorldPosition;
@@ -286,11 +286,12 @@ export class SkyDome {
     const nightF = Math.max(0, 1 - l / 0.35);
     this._nightF = nightF;
 
-    // Gradient colours.
-    this._topColor.setHSL(h, s, l);
-    // Horizon is lighter and less saturated → atmospheric haze (but not white).
-    const horizonL = Math.min(0.78, l * 1.05 + 0.10);
-    const horizonS = s * (0.5 + nightF * 0.2);
+    // Gradient colours. Lift the top saturation a touch for a vibrant zenith.
+    this._topColor.setHSL(h, Math.min(1, s * 1.12), l);
+    // Horizon is lighter and a little less saturated → atmospheric haze, but
+    // deliberately NOT pushed toward white (keeps the sky from reading milky).
+    const horizonL = Math.min(0.72, l * 1.0 + 0.06);
+    const horizonS = s * (0.62 + nightF * 0.2);
     this._horizonColor.setHSL(h, horizonS, horizonL);
 
     // Warm the horizon a touch toward sunrise/sunset (mid lightness, warm hues).
@@ -307,7 +308,7 @@ export class SkyDome {
     this.bands.forEach(b => { b.mesh.material.opacity = b.baseOpacity * nightF; });
 
     // Clouds: tinted toward the horizon colour, brighter by day, dim at night.
-    const cloudTint = this._horizonColor.clone().lerp(new THREE.Color(0xffffff), 0.55 * (1 - nightF));
+    const cloudTint = this._horizonColor.clone().lerp(new THREE.Color(0xffffff), 0.42 * (1 - nightF));
     cloudTint.lerp(new THREE.Color(0x2a3458), nightF * 0.7);
     const cloudVis = 1 - nightF * 0.7;
     this.clouds.forEach(c => {
@@ -315,9 +316,10 @@ export class SkyDome {
       c.mat.opacity = c.baseOpacity * cloudVis;
     });
 
-    // Distant hills: blend toward the horizon haze (farther layer blends more).
+    // Distant hills: keep more of their own colour so the silhouettes stay
+    // defined; only a gentle blend toward the horizon haze for depth.
     this._hillLayers.forEach((H, idx) => {
-      const blend = idx === 0 ? 0.45 : 0.72;
+      const blend = idx === 0 ? 0.3 : 0.55;
       H.mat.color.copy(H.baseColor).lerp(this._horizonColor, blend);
     });
   }

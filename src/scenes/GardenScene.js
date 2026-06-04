@@ -49,13 +49,14 @@ export class GardenScene {
 
     // ── Scene ────────────────────────────────────────────────────────────────
     this.scene = new THREE.Scene();
-    // Fog softens the horizon: the ground edge and distant hills dissolve into
-    // the sky haze instead of ending on a hard line. Colour is driven per-frame
-    // by DayNightCycle to match the horizon.
-    this.scene.fog = new THREE.Fog(0x9fb8e0, 34, 96);
+    // Fog ONLY softens the far horizon: it starts well beyond the playfield so
+    // the foreground (flower, trees, creatures) stays crisp, and fades out just
+    // around the distant hills so they remain visible instead of being washed
+    // into a milky haze. Colour is driven per-frame by DayNightCycle.
+    this.scene.fog = new THREE.Fog(0x9fb8e0, 55, 165);
 
     // ── Camera ───────────────────────────────────────────────────────────────
-    this.camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
+    this.camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 220);
     this.camera.position.set(0, 5.5, 14);
     this.camera.lookAt(0, 2.5, 0);
 
@@ -122,12 +123,16 @@ export class GardenScene {
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
 
-    const bloomStrength = this.isMobile ? 0.55 : 0.85;
+    // Bloom is kept tight: a HIGH threshold means only genuinely bright/emissive
+    // pixels (the energised flower, fireflies, sun/moon glow) bloom, and a modest
+    // strength + small radius keep the glow crisp instead of fogging the whole
+    // frame into a milky wash.
+    const bloomStrength = this.isMobile ? 0.42 : 0.6;
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
       bloomStrength, // strength
-      0.6,           // radius
-      0.85,          // threshold — only bright/emissive areas bloom
+      0.42,          // radius — tighter halo
+      0.9,           // threshold — only bright/emissive areas bloom
     );
     this.composer.addPass(this.bloomPass);
 
@@ -206,8 +211,8 @@ export class GardenScene {
   /** Adjust bloom strength (used by the "Decoração Mágica" upgrade). */
   setBloomBoost(level) {
     if (this.bloomPass) {
-      const base = this.isMobile ? 0.55 : 0.85;
-      this.bloomPass.strength = base + level * 0.12;
+      const base = this.isMobile ? 0.42 : 0.6;
+      this.bloomPass.strength = base + level * 0.1;
     }
   }
 
@@ -270,6 +275,10 @@ export class GardenScene {
     this.camera.position.x = Math.sin(this._camAngle) * r;
     this.camera.position.z = Math.cos(this._camAngle) * r;
     this.camera.lookAt(this._camTarget);
+
+    // Safety net: fade any tree that drifts between the camera and the flower so
+    // the hero flower is never obscured during the orbit.
+    this.trees.updateFade(this.camera, this._camTarget);
 
     this.composer.render();
   }
