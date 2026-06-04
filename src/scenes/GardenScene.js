@@ -19,17 +19,26 @@ import { RockField }      from "../entities/Rock.js";
  */
 export class GardenScene {
   constructor(canvas) {
+    // ── Device quality tier ──────────────────────────────────────────────────
+    const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+    const smallScreen = Math.min(window.innerWidth, window.innerHeight) < 760;
+    this.isMobile = coarse || smallScreen;
+    const q = this.isMobile
+      ? { grass: 600, petals: 40, particles: 300, fireflies: 10, mushrooms: 8, rocks: 8, butterflies: 5, trees: 6, shadows: false }
+      : { grass: 1600, petals: 100, particles: 800, fireflies: 18, mushrooms: 12, rocks: 14, butterflies: 8, trees: 8, shadows: true };
+    this._q = q;
+
     // ── Renderer ────────────────────────────────────────────────────────────
     this.renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: true,
+      antialias: !this.isMobile,
       alpha: false
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.15;
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.enabled = q.shadows;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     // ── Scene ────────────────────────────────────────────────────────────────
@@ -59,30 +68,31 @@ export class GardenScene {
 
     // ── Day/Night Cycle ──────────────────────────────────────────────────────
     this.dayNight = new DayNightCycle(this.scene, this._ambient, this.sky, this.scene.fog);
+    if (!q.shadows) this.dayNight.sunLight.castShadow = false;
 
     // ── Core Systems ─────────────────────────────────────────────────────────
-    this.particles = new ParticleField(800);
+    this.particles = new ParticleField(q.particles);
     this.scene.add(this.particles.points);
 
     this.flowers = new FlowerField();
     this.scene.add(this.flowers.group);
 
     // ── World Elements ───────────────────────────────────────────────────────
-    this.grass  = new GrassField(this.scene, 1600);
-    this.trees  = new TreeField(this.scene, 8);
-    this.petals = new PetalParticles(this.scene, 100);
+    this.grass  = new GrassField(this.scene, q.grass);
+    this.trees  = new TreeField(this.scene, q.trees);
+    this.petals = new PetalParticles(this.scene, q.petals);
 
     // Pond placed to one side
     this.pond = new Pond(this.scene);
     this.pond.group.position.set(-10, 0, -8);
 
     // ── Entities ─────────────────────────────────────────────────────────────
-    this.mushrooms   = new MushroomField(this.scene, 12);
-    this.rocks       = new RockField(this.scene, 14);
-    this.butterflies = new ButterflyField(this.scene, 8);
+    this.mushrooms   = new MushroomField(this.scene, q.mushrooms);
+    this.rocks       = new RockField(this.scene, q.rocks);
+    this.butterflies = new ButterflyField(this.scene, q.butterflies);
 
-    // Fireflies (visible at night)
-    this.fireflies = new FireflyField(this.scene, 18);
+    // Fireflies (visible at night) — sprite-based, no per-firefly lights
+    this.fireflies = new FireflyField(this.scene, q.fireflies);
 
     // Bees — route between flower positions
     const flowerPos = this.flowers.getFlowerPositions();
@@ -120,6 +130,11 @@ export class GardenScene {
   /** Manually toggle day/night */
   toggleDayNight() {
     this.dayNight.toggleNight();
+  }
+
+  /** Trigger the hero-flower energy burst (clicks / level-ups) */
+  energize() {
+    this.flowers.energize();
   }
 
   /** Current time label for HUD (e.g. "14:30") */
@@ -175,5 +190,26 @@ export class GardenScene {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
+  }
+
+  /** Release all GPU resources to avoid leaks when the scene is torn down */
+  dispose() {
+    if (this.fireflies && this.fireflies.dispose) this.fireflies.dispose();
+
+    // Dispose every geometry/material/texture still in the graph.
+    this.scene.traverse((obj) => {
+      if (obj.geometry) obj.geometry.dispose();
+      const mats = Array.isArray(obj.material) ? obj.material : (obj.material ? [obj.material] : []);
+      for (const mat of mats) {
+        for (const key of Object.keys(mat)) {
+          const val = mat[key];
+          if (val && val.isTexture) val.dispose();
+        }
+        mat.dispose();
+      }
+    });
+
+    this.scene.clear();
+    this.renderer.dispose();
   }
 }
