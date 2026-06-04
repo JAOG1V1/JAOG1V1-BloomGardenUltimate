@@ -103,7 +103,9 @@ function buildDaisy({ stemHeight = 2.8, petalColor = 0xffffff, centerColor = 0xf
 
   const stemGeo = new THREE.CylinderGeometry(0.04 * scale, 0.06 * scale, stemHeight, 10);
   const stemMat = new THREE.MeshStandardMaterial({ color: 0x339944, roughness: 0.75 });
-  group.add(Object.assign(new THREE.Mesh(stemGeo, stemMat), { position: new THREE.Vector3(0, stemHeight / 2, 0) }));
+  const stem    = new THREE.Mesh(stemGeo, stemMat);
+  stem.position.y = stemHeight / 2;
+  group.add(stem);
 
   const head = new THREE.Group();
   head.position.y = stemHeight;
@@ -323,6 +325,38 @@ export class FlowerField {
     this.glowRing.rotation.x = -Math.PI / 2;
     this.glowRing.position.y = 0.01;
     this.group.add(this.glowRing);
+
+    // Spark burst emitted from the hero flower on each click (cheap Points)
+    this._buildBurst(main.stemHeight * 1.0 + 0.4);
+  }
+
+  // ─── Click spark burst ──────────────────────────────────────────────────
+  _buildBurst(originY) {
+    this._burstCount = 28;
+    this._burstOrigin = new THREE.Vector3(0, originY, 0);
+    this._burstPos = new Float32Array(this._burstCount * 3);
+    this._burstVel = new Float32Array(this._burstCount * 3);
+    this._burstLife = 0;
+
+    const colors = new Float32Array(this._burstCount * 3);
+    const palette = [
+      new THREE.Color(0xff8bd0), new THREE.Color(0xffd166), new THREE.Color(0x7ef0b5)
+    ];
+    for (let i = 0; i < this._burstCount; i++) {
+      const c = palette[i % palette.length];
+      colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(this._burstPos, 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    this._burstMat = new THREE.PointsMaterial({
+      size: 0.3, vertexColors: true, transparent: true, opacity: 0,
+      depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true
+    });
+    this._burstPoints = new THREE.Points(geo, this._burstMat);
+    this._burstPoints.visible = false;
+    this.group.add(this._burstPoints);
   }
 
   /** Returns flat list of all flower world positions (for Bee routing etc.) */
@@ -330,9 +364,25 @@ export class FlowerField {
     return this.flowers.map(f => f.group.position.clone());
   }
 
-  /** Burst of energy — scale the main flower briefly */
+  /** Burst of energy — scale the main flower briefly + spark burst */
   energize() {
     this._burst = 1.0;
+
+    // (Re)launch spark particles outward from the flower head.
+    this._burstLife = 1.0;
+    this._burstPoints.visible = true;
+    for (let i = 0; i < this._burstCount; i++) {
+      this._burstPos[i * 3]     = this._burstOrigin.x;
+      this._burstPos[i * 3 + 1] = this._burstOrigin.y;
+      this._burstPos[i * 3 + 2] = this._burstOrigin.z;
+      const theta = Math.random() * Math.PI * 2;
+      const phi   = Math.acos(2 * Math.random() - 1);
+      const sp    = 0.04 + Math.random() * 0.06;
+      this._burstVel[i * 3]     = Math.sin(phi) * Math.cos(theta) * sp;
+      this._burstVel[i * 3 + 1] = Math.abs(Math.cos(phi)) * sp + 0.02;
+      this._burstVel[i * 3 + 2] = Math.sin(phi) * Math.sin(theta) * sp;
+    }
+    this._burstPoints.geometry.attributes.position.needsUpdate = true;
   }
 
   update(time) {
@@ -360,6 +410,21 @@ export class FlowerField {
       const f = this.flowers[i];
       f.group.rotation.z = Math.sin(t * 0.7 + i * 1.3) * 0.06;
       if (f.head) f.head.rotation.y = t * (0.3 + (i % 3) * 0.15);
+    }
+
+    // Spark burst animation
+    if (this._burstLife > 0) {
+      const dec = 0.025;
+      for (let i = 0; i < this._burstCount; i++) {
+        this._burstPos[i * 3]     += this._burstVel[i * 3];
+        this._burstPos[i * 3 + 1] += this._burstVel[i * 3 + 1];
+        this._burstPos[i * 3 + 2] += this._burstVel[i * 3 + 2];
+        this._burstVel[i * 3 + 1] -= 0.0025; // gravity
+      }
+      this._burstPoints.geometry.attributes.position.needsUpdate = true;
+      this._burstMat.opacity = this._burstLife;
+      this._burstLife = Math.max(0, this._burstLife - dec);
+      if (this._burstLife === 0) this._burstPoints.visible = false;
     }
   }
 }

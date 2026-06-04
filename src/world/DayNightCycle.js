@@ -77,27 +77,25 @@ export class DayNightCycle {
     // Internal time (0–1)
     this._dayT = 0.4; // start mid-morning
     this._speed = 0.000003; // full day/night cycle ≈ 5.5 min at 60 fps (delta ~16 ms → 25 000 steps)
-    this._paused = false;
-    this._manualOverride = false;
+
+    // Smooth manual transition state
+    this._targetT = null;          // tween destination, or null when idle
+    this._tweenRate = 0.00045;     // day-fraction per ms while tweening (~1.5 s)
 
     this.nightFactor = 0; // exposed for FireflyField
   }
 
-  /** Force a specific time of day (0–1) */
+  /** Smoothly travel to a specific time of day (0–1) */
   setTime(t) {
-    this._dayT = ((t % 1) + 1) % 1;
-    this._manualOverride = true;
-    this._applyPhase();
-    // release override after short delay
-    setTimeout(() => { this._manualOverride = false; }, 500);
+    this._targetT = ((t % 1) + 1) % 1;
   }
 
-  /** Toggle to night or day */
+  /** Smoothly toggle between night and day */
   toggleNight() {
     if (this._dayT > 0.3 && this._dayT < 0.7) {
-      this.setTime(0.0); // jump to midnight
+      this.setTime(0.0); // glide to midnight
     } else {
-      this.setTime(0.5); // jump to noon
+      this.setTime(0.5); // glide to noon
     }
   }
 
@@ -155,7 +153,20 @@ export class DayNightCycle {
   }
 
   update(delta) {
-    if (!this._manualOverride) {
+    if (this._targetT !== null) {
+      // Glide along the shortest path around the 0–1 clock toward the target.
+      let diff = this._targetT - this._dayT;
+      if (diff > 0.5) diff -= 1;
+      if (diff < -0.5) diff += 1;
+
+      const step = this._tweenRate * delta;
+      if (Math.abs(diff) <= step) {
+        this._dayT = this._targetT;
+        this._targetT = null;
+      } else {
+        this._dayT = ((this._dayT + Math.sign(diff) * step) % 1 + 1) % 1;
+      }
+    } else {
       this._dayT = (this._dayT + this._speed * delta) % 1;
     }
     this._applyPhase();

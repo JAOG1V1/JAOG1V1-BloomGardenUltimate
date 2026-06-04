@@ -16,6 +16,16 @@
     <div id="app">
       <canvas id="scene"></canvas>
 
+      <!-- ── Loading indicator (covers black canvas while the 3D scene builds) ── -->
+      <div class="loading-overlay" id="loading-overlay" role="status" aria-live="polite" hidden>
+        <div class="loading-flower">🌸</div>
+        <div class="loading-text">Cultivando o jardim…</div>
+        <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+      </div>
+
+      <!-- ── Floating feedback layer (score pops) ── -->
+      <div class="fx-layer" id="fx-layer" aria-hidden="true"></div>
+
       <div id="ui-root">
         <!-- ── HUD ── -->
         <div class="hud glass" id="hud">
@@ -42,8 +52,14 @@
               <span class="hud-val" id="level-value">1</span>
             </div>
           </div>
-          <div class="energy-bar">
+          <div class="energy-bar" title="Energia da flor">
             <div class="energy-bar-fill" id="energy-bar-fill"></div>
+          </div>
+          <div class="hud-progress">
+            <span class="hud-progress-label">Nível <span id="level-next">2</span></span>
+            <div class="level-bar" title="Seiva até o próximo nível">
+              <div class="level-bar-fill" id="level-bar-fill"></div>
+            </div>
           </div>
           <div class="hud-time">
             <span class="hud-icon">🕐</span>
@@ -67,15 +83,15 @@
         </div>
 
         <!-- ── Menu overlay ── -->
-        <div class="menu-overlay" id="menu-overlay">
+        <div class="menu-overlay" id="menu-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
           <div class="menu-card glass">
-            <div class="menu-logo">🌸</div>
-            <h1>Bloom Garden<br /><span>Ultimate</span></h1>
-            <p>
+            <div class="menu-logo" aria-hidden="true">🌸</div>
+            <h1 id="menu-title">Bloom Garden<br /><span>Ultimate</span></h1>
+            <p class="menu-subtitle">
               Um jardim mágico vivo, pronto para florescer.<br />
               Borboletas, vagalumes, cogumelos e muito mais aguardam você.
             </p>
-            <div class="menu-legend">
+            <div class="menu-legend" aria-hidden="true">
               <span>🦋 Borboletas</span>
               <span>🐝 Abelhas</span>
               <span>🍄 Cogumelos</span>
@@ -83,9 +99,9 @@
               <span>💧 Lagoa</span>
               <span>✨ Vagalumes</span>
             </div>
-            <button id="start-button">
+            <button id="start-button" type="button" aria-label="Entrar no Jardim">
               <span>Entrar no Jardim</span>
-              <span class="btn-glow"></span>
+              <span class="btn-glow" aria-hidden="true"></span>
             </button>
           </div>
         </div>

@@ -59,12 +59,9 @@ function buildMushroom(palette, scale = 1) {
     group.add(spot);
   }
 
-  // Soft glow light
-  const glow = new THREE.PointLight(palette.cap, 0.4 * scale, 3 * scale);
-  glow.position.y = stemH + capR;
-  group.add(glow);
-
-  return { group, capMat, stemMat, glow };
+  // Soft glow is faked purely with the cap's emissive material (no PointLight —
+  // many dynamic lights wreck WebGL performance).
+  return { group, capMat, stemMat };
 }
 
 export class MushroomField {
@@ -98,7 +95,6 @@ export class MushroomField {
     for (const m of this._mushrooms) {
       const pulse = 0.28 + Math.sin(t * 1.5 + m.phase) * 0.12;
       m.capMat.emissiveIntensity = pulse;
-      m.glow.intensity = pulse * 0.7;
     }
   }
 }
