@@ -133,8 +133,20 @@ export class Game {
     this._resizeObserver.observe(document.documentElement);
     this._onResize();
 
-    // Pointer interaction (pointerdown unifies mouse, touch and pen)
-    this._canvas.addEventListener("pointerdown", e => this._onPointer(e));
+    // Pointer interaction: distinguish a tap (energize/collect) from a camera
+    // drag handled by OrbitControls. We record where the pointer went down and
+    // only treat it as a click if it barely moved and was released quickly.
+    this._canvas.addEventListener("pointerdown", e => {
+      this._ptr = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId };
+    });
+    this._canvas.addEventListener("pointerup", e => {
+      const p = this._ptr;
+      this._ptr = null;
+      if (!p || p.id !== e.pointerId) return;
+      const moved = Math.hypot(e.clientX - p.x, e.clientY - p.y);
+      const dt = performance.now() - p.t;
+      if (moved <= 8 && dt <= 400) this._onPointer(e); // genuine tap
+    });
 
     // Action buttons
     this._ui.bindDayNightToggle(() => { if (this._scene) this._scene.toggleDayNight(); });

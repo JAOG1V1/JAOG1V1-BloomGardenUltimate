@@ -4,6 +4,7 @@ import { RenderPass }     from "three/examples/jsm/postprocessing/RenderPass.js"
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { ShaderPass }     from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { OutputPass }     from "three/examples/jsm/postprocessing/OutputPass.js";
+import { OrbitControls }  from "three/examples/jsm/controls/OrbitControls.js";
 import { SkyDome }        from "../systems/SkyDome.js";
 import { ParticleField }  from "../systems/ParticleField.js";
 import { FlowerField }    from "../systems/FlowerField.js";
@@ -118,6 +119,38 @@ export class GardenScene {
     this._camAngle  = 0;
     this._camTarget = new THREE.Vector3(0, 2.5, 0);
     this._lastTime  = 0;
+
+    // ── Orbit controls: drag to look around, wheel/pinch to zoom ──────────────
+    // The camera auto-orbits while the player is idle, giving the garden a calm,
+    // living feel; the moment the player grabs the camera (drag/zoom) the auto
+    // orbit pauses, and it gently resumes a few seconds after they let go.
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.enableDamping  = true;
+    this.controls.dampingFactor  = 0.06;
+    this.controls.enablePan      = false;          // keep focus on the garden
+    this.controls.target.copy(this._camTarget);
+    this.controls.minDistance    = 6;              // don't clip into the flower
+    this.controls.maxDistance    = 26;             // stay within the playfield
+    this.controls.minPolarAngle  = 0.25;           // don't look straight down
+    this.controls.maxPolarAngle  = Math.PI * 0.49; // don't dip below the ground
+    this.controls.rotateSpeed    = 0.5;
+    this.controls.zoomSpeed      = 0.8;
+    this.controls.autoRotate      = true;
+    this.controls.autoRotateSpeed = 0.35;          // slow, dreamy idle orbit
+    this.controls.update();
+
+    // Idle tracking: pause the auto orbit during interaction, resume when idle.
+    this._idleDelay   = 4.0;  // seconds of stillness before auto orbit resumes
+    this._lastInteract = -Infinity;
+    this._interacting  = false;
+    this.controls.addEventListener("start", () => {
+      this._interacting = true;
+      this.controls.autoRotate = false;
+    });
+    this.controls.addEventListener("end", () => {
+      this._interacting = false;
+      this._lastInteract = this._lastTime;
+    });
 
     // ── Post-processing: bloom for the magical glow ──────────────────────────
     this.composer = new EffectComposer(this.renderer);
@@ -269,12 +302,14 @@ export class GardenScene {
     this.fireflies.update(time);
     this.bees.update(time);
 
-    // Slow camera orbit
-    this._camAngle += 0.00012;
-    const r = 14;
-    this.camera.position.x = Math.sin(this._camAngle) * r;
-    this.camera.position.z = Math.cos(this._camAngle) * r;
-    this.camera.lookAt(this._camTarget);
+    // Camera: OrbitControls handles user drag/zoom with damping. When the
+    // player has been idle past the threshold, re-enable the gentle auto orbit.
+    if (!this._interacting && !this.controls.autoRotate &&
+        (time - this._lastInteract) > this._idleDelay * 1000) {
+      this.controls.autoRotate = true;
+    }
+    this.controls.update();
+    this._camTarget.copy(this.controls.target);
 
     // Safety net: fade any tree that drifts between the camera and the flower so
     // the hero flower is never obscured during the orbit.
@@ -300,6 +335,7 @@ export class GardenScene {
 
   /** Release all GPU resources to avoid leaks when the scene is torn down */
   dispose() {
+    if (this.controls && this.controls.dispose) this.controls.dispose();
     if (this.fireflies && this.fireflies.dispose) this.fireflies.dispose();
     if (this.powerups && this.powerups.dispose) this.powerups.dispose();
 
