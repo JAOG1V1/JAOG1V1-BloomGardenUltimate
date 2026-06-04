@@ -54,7 +54,9 @@ export class FireflyField {
 
       // Per-sprite material clone so each can blink independently.
       const sprite = new THREE.Sprite(mat.clone());
-      sprite.scale.setScalar(0.55);
+      // Vary base size so the swarm reads as near/far motes, not identical dots.
+      const baseScale = 0.32 + Math.random() * 0.4;
+      sprite.scale.setScalar(baseScale);
 
       const cx = (Math.random() - 0.5) * 20;
       const cz = (Math.random() - 0.5) * 16;
@@ -67,6 +69,8 @@ export class FireflyField {
         sprite,
         mat: sprite.material,
         cx, cy, cz,
+        baseScale,
+        bright: 0.55 + Math.random() * 0.45, // per-firefly peak glow variation
         speed:  0.2 + Math.random() * 0.4,
         radius: 1.0 + Math.random() * 2.5,
         phase:  Math.random() * Math.PI * 2,
@@ -104,11 +108,12 @@ export class FireflyField {
         f.cz + Math.sin(angle) * f.radius * 0.7,
       );
 
-      // Blink: fake the glow via sprite opacity + scale.
+      // Blink: fake the glow via sprite opacity + scale, softened and varied
+      // per firefly so the swarm twinkles gently instead of strobing brightly.
       const blink = Math.max(0, Math.sin(t * 3 + f.blinkPhase));
-      const intensity = this._nightIntensity * blink;
-      f.mat.opacity = intensity;
-      f.sprite.scale.setScalar(0.4 + intensity * 0.35);
+      const intensity = this._nightIntensity * blink * f.bright;
+      f.mat.opacity = intensity * 0.8;
+      f.sprite.scale.setScalar(f.baseScale * (0.8 + intensity * 0.4));
     }
   }
 

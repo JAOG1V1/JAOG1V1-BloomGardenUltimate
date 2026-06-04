@@ -31,8 +31,8 @@ export class GardenScene {
     const smallScreen = Math.min(window.innerWidth, window.innerHeight) < 760;
     this.isMobile = coarse || smallScreen || lowQuality;
     const q = this.isMobile
-      ? { grass: 1100, petals: 40, particles: 300, fireflies: 10, mushrooms: 8, rocks: 8, butterflies: 5, trees: 6, shadows: false }
-      : { grass: 2800, petals: 100, particles: 800, fireflies: 18, mushrooms: 12, rocks: 14, butterflies: 8, trees: 8, shadows: true };
+      ? { grass: 1100, petals: 40, particles: 170, fireflies: 7, mushrooms: 8, rocks: 8, butterflies: 5, trees: 6, shadows: false }
+      : { grass: 2800, petals: 100, particles: 420, fireflies: 12, mushrooms: 12, rocks: 14, butterflies: 8, trees: 8, shadows: true };
     this._q = q;
 
     // ── Renderer ────────────────────────────────────────────────────────────
