@@ -1,74 +1,78 @@
+import { SPECIES } from "../systems/FlowerSpecies.js";
+import { ACHIEVEMENTS } from "./Achievements.js";
+import { UPGRADES, upgradeLevel, upgradeCost } from "./Upgrades.js";
+
+const $ = (id) => document.getElementById(id);
+
+/**
+ * UI — owns every DOM element and exposes a small API the Game drives. It also
+ * fixes the original bug where the HUD/toast were visible behind the menu: the
+ * in-game layer is gated behind the `#ui-root.in-game` class and only revealed
+ * once the player enters the garden.
+ */
 export class UI {
   constructor() {
-    this.scoreValue     = document.getElementById("score-value");
-    this.sapValue       = document.getElementById("sap-value");
-    this.energyValue    = document.getElementById("energy-value");
-    this.levelValue     = document.getElementById("level-value");
-    this.levelNext      = document.getElementById("level-next");
-    this.timeValue      = document.getElementById("time-value");
-    this.energyBarFill  = document.getElementById("energy-bar-fill");
-    this.levelBarFill   = document.getElementById("level-bar-fill");
-    this.messageBox     = document.getElementById("message-box");
-    this.menuOverlay    = document.getElementById("menu-overlay");
-    this.startButton    = document.getElementById("start-button");
-    this.uiRoot         = document.getElementById("ui-root");
-    this.loadingOverlay = document.getElementById("loading-overlay");
-    this.fxLayer        = document.getElementById("fx-layer");
-    this._photoMode     = false;
+    this.uiRoot         = $("ui-root");
+    this.scoreValue     = $("score-value");
+    this.sapValue       = $("sap-value");
+    this.energyValue    = $("energy-value");
+    this.levelValue     = $("level-value");
+    this.levelNext      = $("level-next");
+    this.timeValue      = $("time-value");
+    this.energyBarFill  = $("energy-bar-fill");
+    this.levelBarFill   = $("level-bar-fill");
+    this.messageBox     = $("message-box");
+    this.menuOverlay    = $("menu-overlay");
+    this.startButton    = $("start-button");
+    this.continueButton = $("btn-continue");
+    this.loadingOverlay = $("loading-overlay");
+    this.fxLayer        = $("fx-layer");
+    this.toastLayer     = $("toast-layer");
+    this.sceneFade      = $("scene-fade");
+
+    this.comboMeter   = $("combo-meter");
+    this.comboMult    = $("combo-mult");
+    this.comboBarFill = $("combo-bar-fill");
+    this.powerupTray  = $("powerup-tray");
+
+    this.panelOverlay = $("panel-overlay");
+    this._photoMode   = false;
+
+    this._buildMenuPetals();
   }
 
-  /**
-   * Attach the menu start handler. Fires once on click, touch, or keyboard,
-   * covering desktop (click/Enter/Space) and mobile (touch -> pointerup).
-   */
-  bindStart(handler) {
-    let fired = false;
-    const run = (e) => {
-      if (fired) return;
-      fired = true;
-      if (e) e.preventDefault();
-      this.startButton.removeEventListener("pointerup", run);
-      this.startButton.removeEventListener("click", run);
-      handler();
-    };
-    // pointerup covers mouse, touch and pen; click is the keyboard fallback.
-    this.startButton.addEventListener("pointerup", run);
-    this.startButton.addEventListener("click", run);
-    // Move keyboard focus to the CTA so Enter/Space work immediately.
-    this.startButton.focus({ preventScroll: true });
+  // ── Menu petals (decorative) ───────────────────────────────────────────────
+  _buildMenuPetals() {
+    const host = $("menu-petals");
+    if (!host) return;
+    const emojis = ["🌸", "🌺", "🌼", "🌷", "✨", "🍃"];
+    for (let i = 0; i < 16; i++) {
+      const el = document.createElement("span");
+      el.className = "petal";
+      el.textContent = emojis[i % emojis.length];
+      el.style.left = `${Math.random() * 100}%`;
+      el.style.fontSize = `${14 + Math.random() * 18}px`;
+      el.style.animationDuration = `${7 + Math.random() * 9}s`;
+      el.style.animationDelay = `${-Math.random() * 12}s`;
+      host.appendChild(el);
+    }
   }
 
-  /** Bind day/night toggle button */
-  bindDayNightToggle(handler) {
-    const btn = document.getElementById("btn-day-night");
-    if (btn) btn.addEventListener("click", handler);
-  }
-
-  /** Bind photo mode toggle button (click + Esc to exit) */
-  bindPhotoMode(handler) {
-    const btn = document.getElementById("btn-photo");
-    const apply = () => {
-      this.uiRoot.classList.toggle("photo-mode", this._photoMode);
-      if (btn) {
-        btn.textContent = this._photoMode ? "📷 Sair" : "📷";
-        btn.setAttribute("aria-pressed", String(this._photoMode));
-      }
-      if (handler) handler(this._photoMode);
-    };
-    const toggle = () => { this._photoMode = !this._photoMode; apply(); };
-
-    if (btn) btn.addEventListener("click", toggle);
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && this._photoMode) toggle();
-    });
-  }
-
-  /** Show or hide the main menu */
+  // ── Visibility / transitions ───────────────────────────────────────────────
   setMenuVisible(visible) {
     this.menuOverlay.style.display = visible ? "grid" : "none";
   }
 
-  /** Show / hide the 3D loading indicator */
+  /** Reveal the in-game HUD layer (fixes the HUD-on-menu bug). */
+  setInGame(on) {
+    this.uiRoot.classList.toggle("in-game", on);
+  }
+
+  fade(show) {
+    if (!this.sceneFade) return;
+    this.sceneFade.classList.toggle("show", show);
+  }
+
   setLoadingVisible(visible) {
     if (!this.loadingOverlay) return;
     if (visible) {
@@ -76,17 +80,100 @@ export class UI {
       this.loadingOverlay.classList.remove("fade-out");
     } else {
       this.loadingOverlay.classList.add("fade-out");
-      // Remove from layout after the fade transition completes.
       setTimeout(() => { this.loadingOverlay.hidden = true; }, 520);
     }
   }
 
-  /** Update all HUD values from the game state object */
+  // ── Menu wiring ────────────────────────────────────────────────────────────
+  bindStart(handler) { this._bindButton(this.startButton, handler, true); }
+  bindContinue(handler) { this._bindButton(this.continueButton, handler, false); }
+
+  _bindButton(btn, handler, focus) {
+    if (!btn) return;
+    const run = (e) => { if (e) e.preventDefault(); handler(); };
+    btn.addEventListener("click", run);
+    if (focus) btn.focus({ preventScroll: true });
+  }
+
+  /** Show the Continue button + saved level/score when a save exists. */
+  showSaveInfo(state, hasSave) {
+    const save = $("menu-save");
+    if (hasSave) {
+      this.continueButton.hidden = false;
+      $("menu-save-level").textContent = state.level;
+      $("menu-save-score").textContent = Math.floor(state.score).toLocaleString("pt-BR");
+      if (save) save.hidden = false;
+      this.startButton.querySelector("span").textContent = "Novo Jogo";
+    } else {
+      this.continueButton.hidden = true;
+      if (save) save.hidden = true;
+      this.startButton.querySelector("span").textContent = "Entrar no Jardim";
+    }
+  }
+
+  bindMenuActions({ onSettings, onCredits }) {
+    $("btn-settings")?.addEventListener("click", () => onSettings());
+    $("btn-credits")?.addEventListener("click", () => onCredits());
+  }
+
+  // ── Action buttons ─────────────────────────────────────────────────────────
+  bindDayNightToggle(handler) { $("btn-day-night")?.addEventListener("click", handler); }
+  bindShopButton(handler)     { $("btn-shop")?.addEventListener("click", handler); }
+  bindCollectionButton(handler) { $("btn-collection")?.addEventListener("click", handler); }
+  bindSoundButton(handler)    { $("btn-sound")?.addEventListener("click", handler); }
+
+  setSoundIcon(muted) {
+    const b = $("btn-sound");
+    if (b) b.textContent = muted ? "🔇" : "🔊";
+  }
+
+  bindPhotoMode(handler) {
+    const btn = $("btn-photo");
+    const apply = () => {
+      this.uiRoot.classList.toggle("photo-mode", this._photoMode);
+      if (btn) {
+        btn.textContent = this._photoMode ? "📷✕" : "📷";
+        btn.setAttribute("aria-pressed", String(this._photoMode));
+      }
+      if (handler) handler(this._photoMode);
+    };
+    const toggle = () => { this._photoMode = !this._photoMode; apply(); };
+    if (btn) btn.addEventListener("click", toggle);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && this._photoMode) toggle();
+    });
+  }
+
+  // ── Panels ─────────────────────────────────────────────────────────────────
+  bindPanels() {
+    // Close buttons + click on backdrop.
+    this.panelOverlay.querySelectorAll("[data-close]").forEach(b =>
+      b.addEventListener("click", () => this.closePanel()));
+    this.panelOverlay.addEventListener("click", (e) => {
+      if (e.target === this.panelOverlay) this.closePanel();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !this.panelOverlay.hidden) this.closePanel();
+    });
+  }
+
+  openPanel(name) {
+    this.panelOverlay.hidden = false;
+    this.panelOverlay.querySelectorAll(".panel").forEach(p => {
+      p.hidden = p.dataset.panel !== name;
+    });
+  }
+
+  closePanel() {
+    this.panelOverlay.hidden = true;
+  }
+
+  // ── HUD ──────────────────────────────────────────────────────────────────
   setHUD(state, levelProgress = 0) {
-    this.scoreValue.textContent    = Math.floor(state.score).toLocaleString("pt-BR");
-    this.sapValue.textContent      = Math.floor(state.sap);
-    this.energyValue.textContent   = Math.floor(state.energy);
-    this.levelValue.textContent    = state.level;
+    this.scoreValue.textContent  = Math.floor(state.score).toLocaleString("pt-BR");
+    this.sapValue.textContent    = Math.floor(state.sap);
+    this.energyValue.textContent = Math.floor(state.energy);
+    this.levelValue.textContent  = state.level;
     if (this.levelNext) this.levelNext.textContent = state.level + 1;
     this.energyBarFill.style.width = `${Math.max(0, Math.min(100, state.energy))}%`;
     if (this.levelBarFill) {
@@ -94,27 +181,131 @@ export class UI {
     }
   }
 
-  /** Update the time of day display */
-  setTimeLabel(label) {
-    if (this.timeValue) this.timeValue.textContent = label;
+  setTimeLabel(label) { if (this.timeValue) this.timeValue.textContent = label; }
+  setMessage(text) { this.messageBox.textContent = text; }
+
+  // ── Combo ──────────────────────────────────────────────────────────────────
+  setCombo(mult, frac) {
+    if (mult <= 1) { this.hideCombo(); return; }
+    this.comboMeter.classList.add("active");
+    this.comboMult.textContent = `x${mult}`;
+    this.comboBarFill.style.width = `${Math.max(0, Math.min(100, frac * 100))}%`;
   }
 
-  /** Update the bottom message bar */
-  setMessage(text) {
-    this.messageBox.textContent = text;
+  bumpCombo() {
+    this.comboMeter.classList.remove("bump");
+    void this.comboMeter.offsetWidth; // restart animation
+    this.comboMeter.classList.add("bump");
   }
 
-  /** Spawn a floating "+N" feedback number at screen coordinates */
-  floatText(x, y, text) {
+  hideCombo() { this.comboMeter.classList.remove("active"); }
+
+  // ── Active power-up badges ─────────────────────────────────────────────────
+  setPowerups(list) {
+    if (!list.length) { this.powerupTray.classList.remove("active"); this.powerupTray.innerHTML = ""; return; }
+    this.powerupTray.classList.add("active");
+    this.powerupTray.innerHTML = list.map(p =>
+      `<div class="powerup-badge"><span class="pb-icon">${p.icon}</span><span class="pb-time">${Math.ceil(p.time)}s</span></div>`
+    ).join("");
+  }
+
+  // ── Floating "+N" feedback ─────────────────────────────────────────────────
+  floatText(x, y, text, cls = "") {
     if (!this.fxLayer) return;
     const el = document.createElement("span");
-    el.className = "fx-pop";
+    el.className = `fx-pop ${cls}`;
     el.textContent = text;
     el.style.left = `${x}px`;
     el.style.top  = `${y}px`;
     this.fxLayer.appendChild(el);
     el.addEventListener("animationend", () => el.remove());
-    // Safety cleanup in case animationend doesn't fire.
     setTimeout(() => el.remove(), 1200);
+  }
+
+  // ── Centre toast ───────────────────────────────────────────────────────────
+  toast(text) {
+    if (!this.toastLayer) return;
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = text;
+    this.toastLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove());
+    setTimeout(() => el.remove(), 3200);
+  }
+
+  // ── Settings ───────────────────────────────────────────────────────────────
+  bindSettings({ onSound, onQuality, onReset }) {
+    $("setting-sound")?.addEventListener("click", onSound);
+    $("setting-quality")?.addEventListener("click", onQuality);
+    $("setting-reset")?.addEventListener("click", onReset);
+  }
+
+  setSettingSound(on) {
+    const b = $("setting-sound");
+    if (b) { b.textContent = on ? "Ligado" : "Desligado"; b.setAttribute("aria-pressed", String(on)); }
+  }
+
+  setSettingQuality(low) {
+    const b = $("setting-quality");
+    if (b) { b.textContent = low ? "Reduzida" : "Auto"; b.setAttribute("aria-pressed", String(low)); }
+  }
+
+  // ── Shop ─────────────────────────────────────────────────────────────────
+  renderShop(state, onBuy) {
+    $("shop-score").textContent = Math.floor(state.score).toLocaleString("pt-BR");
+    $("shop-sap").textContent   = Math.floor(state.sap);
+    const list = $("shop-list");
+    list.innerHTML = "";
+    for (const u of UPGRADES) {
+      const lvl = upgradeLevel(state, u.id);
+      const maxed = lvl >= u.max;
+      const cost = upgradeCost(u, lvl);
+      const cur = u.currency === "sap" ? state.sap : state.score;
+      const curIcon = u.currency === "sap" ? "💧" : "⭐";
+      const afford = cur >= cost;
+
+      const row = document.createElement("div");
+      row.className = "shop-item";
+      row.innerHTML = `
+        <span class="si-icon">${u.icon}</span>
+        <div class="si-body">
+          <div class="si-name">${u.name}</div>
+          <div class="si-desc">${u.desc}</div>
+          <div class="si-level">Nível ${lvl}/${u.max}</div>
+        </div>
+        <button class="shop-buy ${maxed ? "maxed" : ""}" ${(!afford || maxed) ? "disabled" : ""}>
+          ${maxed ? "MÁX" : `${curIcon} ${cost.toLocaleString("pt-BR")}`}
+        </button>`;
+      if (!maxed) {
+        row.querySelector(".shop-buy").addEventListener("click", () => onBuy(u.id));
+      }
+      list.appendChild(row);
+    }
+  }
+
+  // ── Collection & achievements ──────────────────────────────────────────────
+  renderCollection(state) {
+    const grid = $("species-grid");
+    grid.innerHTML = "";
+    for (const sp of SPECIES) {
+      const unlocked = (state.unlockedSpecies || []).includes(sp.id);
+      const cell = document.createElement("div");
+      cell.className = `species-cell ${unlocked ? "" : "locked"}`;
+      cell.innerHTML = `<div class="sc-emoji">${unlocked ? sp.emoji : "❔"}</div>
+                        <div class="sc-name">${unlocked ? sp.name : "???"}</div>`;
+      grid.appendChild(cell);
+    }
+
+    const list = $("achievement-list");
+    list.innerHTML = "";
+    for (const a of ACHIEVEMENTS) {
+      const earned = (state.achievements || []).includes(a.id);
+      const row = document.createElement("div");
+      row.className = `achievement ${earned ? "" : "locked"}`;
+      row.innerHTML = `<span class="a-icon">${a.icon}</span>
+        <div><div class="a-name">${a.name}</div><div class="a-desc">${a.desc}</div></div>
+        <span class="a-check">${earned ? "✅" : "🔒"}</span>`;
+      list.appendChild(row);
+    }
   }
 }
