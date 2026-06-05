@@ -20,7 +20,7 @@ export class SaveSystem {
       unlockedSpecies: [...BASE_SPECIES],
       achievements: [],          // ids earned
       settings: { sound: true, lowQuality: false },
-      stats: { powerupsCollected: 0, maxCombo: 0, sawFireflies: false },
+      stats: { powerupsCollected: 0, maxCombo: 0, sawFireflies: false, tutorialDone: false },
     };
   }
 

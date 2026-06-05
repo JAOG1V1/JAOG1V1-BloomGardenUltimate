@@ -82,7 +82,11 @@ export class Game {
     this._ui.bindMenuActions({
       onSettings: () => this._ui.openPanel("settings"),
       onCredits:  () => this._ui.openPanel("credits"),
+      onHowto:    () => this._ui.openPanel("howto"),
     });
+
+    // "Refazer tutorial" from the How-to-play panel.
+    this._ui.bindHowtoTutorial(() => { this._ui.closePanel(); this._startTutorial(true); });
 
     // ── Settings (work from the menu too) ─────────────────────────────────────
     this._ui.bindSettings({
@@ -153,7 +157,12 @@ export class Game {
     this._ui.bindShopButton(() => this._openShop());
     this._ui.bindCollectionButton(() => this._openCollection());
     this._ui.bindSoundButton(() => this._toggleSound());
+    this._ui.bindHelpButton(() => this._ui.openPanel("howto"));
     this._ui.bindPhotoMode(null);
+
+    // On-screen hint the first time each kind of power-up appears.
+    this._powerupHinted = {};
+    this._scene.powerups.onSpawn = (kind) => this._onPowerUpSpawn(kind);
 
     // First render, then reveal the world.
     this._scene.update(performance.now());
@@ -164,10 +173,51 @@ export class Game {
     // Welcome toast only AFTER entering (never on the menu).
     this._ui.toast("🌸 Bem-vindo ao seu jardim!");
 
+    // First-time players get a short guided tutorial explaining the loop.
+    if (!this._state.stats.tutorialDone) {
+      this._startTutorial(false);
+    }
+
     // Start loop
     this._running = true;
     this._lastTime = performance.now();
     requestAnimationFrame(t => this._loop(t));
+  }
+
+  /** Show the guided onboarding tutorial; `force` replays it even if seen. */
+  _startTutorial(force) {
+    if (!force && this._state.stats.tutorialDone) return;
+    const steps = [
+      { emoji: "🌸", title: "Bem-vindo ao Bloom Garden!",
+        text: "Você cultiva um jardim mágico vivo. Vou te mostrar como ele funciona em poucos passos." },
+      { emoji: "👆", title: "Energize a flor",
+        text: "Clique (ou toque) na grande flor do centro para enchê-la de Energia ⚡. A energia cai devagar, então continue clicando!" },
+      { emoji: "💧", title: "Energia vira Seiva",
+        text: "Com a flor energizada, o jardim produz Seiva 💧 sozinho. Junte seiva para subir de Nível 🌿 e tudo floresce mais rápido." },
+      { emoji: "⭐", title: "Pontos & Loja",
+        text: "Clicar e manter o jardim ativo rende Pontos ⭐. Gaste-os na Loja 🛒 em upgrades: clique mais forte, abelhas, novas espécies e mais." },
+      { emoji: "🎁", title: "Power-ups & ciclo dia/noite",
+        text: "Itens brilhantes aparecem no jardim — clique para coletar bônus! No botão 🌙 você alterna dia e noite, quando surgem vagalumes." },
+      { emoji: "❔", title: "Pronto para florescer!",
+        text: "Pode reabrir este guia a qualquer momento no botão ❔. Bom cultivo! 🌱" },
+    ];
+    this._ui.showTutorial(steps, () => {
+      this._state.stats.tutorialDone = true;
+      this._save.save(this._state);
+    });
+  }
+
+  /** First-time on-screen hint describing a power-up when it appears. */
+  _onPowerUpSpawn(kind) {
+    if (this._powerupHinted[kind]) return;
+    this._powerupHinted[kind] = true;
+    const hints = {
+      butterfly: "🦋 Borboleta Dourada apareceu! Clique nela: dobra a energia por clique.",
+      rain:      "🌧️ Nuvem de Chuva! Clique nela: auto-clica a flor por alguns segundos.",
+      mushroom:  "🍄 Cogumelo Mágico! Clique nele: explosão instantânea de seiva.",
+      fireflies: "✨ Enxame de Vagalumes! Clique nele: grande bônus de pontos.",
+    };
+    if (hints[kind]) this._ui.toast(hints[kind]);
   }
 
   // ── Game loop ─────────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { terrainHeight, POND } from "./Terrain.js";
 
 /**
  * GrassField — dense instanced grass with tapered, slightly curved blades,
@@ -38,25 +39,33 @@ export class GrassField {
     const dummy = new THREE.Object3D();
     const baseCol = new THREE.Color();
 
+    let w = 0; // write index (resample so the pond never leaves identity blades)
     for (let i = 0; i < count; i++) {
-      // Disc distribution biased toward the centre meadow.
-      const angle = Math.random() * Math.PI * 2;
-      const dist  = 1.5 + Math.pow(Math.random(), 0.7) * 24;
-      const x = Math.cos(angle) * dist;
-      const z = Math.sin(angle) * dist;
+      // Disc distribution biased toward the centre meadow; resample if it lands
+      // in the pond so we don't sprout blades through the water surface.
+      let x = 0, z = 0;
+      for (let tries = 0; tries < 6; tries++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist  = 1.5 + Math.pow(Math.random(), 0.7) * 24;
+        x = Math.cos(angle) * dist;
+        z = Math.sin(angle) * dist;
+        if (Math.hypot(x - POND.x, z - POND.z) > POND.radius * 0.95) break;
+      }
 
-      dummy.position.set(x, 0, z);
+      dummy.position.set(x, terrainHeight(x, z), z);
       dummy.rotation.y = Math.random() * Math.PI * 2;
       dummy.rotation.z = (Math.random() - 0.5) * 0.25; // natural lean
       const h = 0.7 + Math.random() * 0.9;
       dummy.scale.set(0.8 + Math.random() * 0.5, h, 0.8 + Math.random() * 0.5);
       dummy.updateMatrix();
-      this._mesh.setMatrixAt(i, dummy.matrix);
+      this._mesh.setMatrixAt(w, dummy.matrix);
 
       // Per-blade green tone variation.
       baseCol.setHSL(0.33 - Math.random() * 0.06, 0.55 + Math.random() * 0.2, 0.32 + Math.random() * 0.12);
-      this._mesh.setColorAt(i, baseCol);
+      this._mesh.setColorAt(w, baseCol);
+      w++;
     }
+    this._mesh.count = w;
     this._mesh.instanceMatrix.needsUpdate = true;
     if (this._mesh.instanceColor) this._mesh.instanceColor.needsUpdate = true;
 
