@@ -27,13 +27,14 @@ O fluxo de inicialização é:
 ```
 index.html
   └─ src/main.js              → cria a instância de Game
-       └─ game/Game.js        → orquestra estado, loop, UI e save
-            ├─ game/UI.js      → HUD em DOM/HTML (pontos, energia, nível…)
-            ├─ game/SaveSystem → persistência via localStorage
+       └─ game/Game.js        → orquestra estado, loop, economia, combo, loja e conquistas
+            ├─ game/UI.js      → HUD em DOM/HTML (pontos, energia, nível, loja, tutorial…)
+            ├─ game/SaveSystem → persistência via localStorage (com migração)
+            ├─ game/Sound.js   → áudio WebAudio (cliques, coleta, ambiente)
             └─ scenes/GardenScene.js → monta a cena Three.js
-                 ├─ systems/   → céu, partículas, flores
-                 ├─ world/     → grama, árvores, lagoa, pétalas
-                 └─ entities/  → borboletas, abelhas, cogumelos, vagalumes, pedras
+                 ├─ systems/   → céu, partículas, flores (+ espécies, texturas)
+                 ├─ world/     → terreno, grama, árvores, lagoa, pétalas
+                 └─ entities/  → borboletas, abelhas, cogumelos, vagalumes, power-ups, pedras
 ```
 
 Cada módulo exporta **uma classe** com responsabilidade única. A `GardenScene`
@@ -53,9 +54,12 @@ A separação entre **lógica de jogo** (`game/`) e **mundo 3D** (`scenes/`,
 ### `src/game/`
 | Arquivo | Responsabilidade |
 |---|---|
-| `Game.js` | Classe raiz. Mantém o estado, roda o loop (`requestAnimationFrame`), processa cliques/toques, aplica a economia do jogo e dispara o auto-save. |
-| `UI.js` | Camada de interface em DOM: atualiza HUD, barra de energia/nível, mensagens, texto flutuante "+N", menu inicial, modo foto e toggle dia/noite. |
-| `SaveSystem.js` | Carrega e salva o estado em `localStorage`, com estado padrão e tolerância a falhas (modo privado, cota cheia). |
+| `Game.js` | Classe raiz. Mantém o estado, roda o loop (`requestAnimationFrame`), processa cliques/toques, aplica a economia (energia → seiva → nível → pontos), combo, power-ups temporizados, loja e conquistas, e dispara o auto-save. |
+| `UI.js` | Camada de interface em DOM: HUD, barra de energia/nível, mensagens, texto flutuante "+N", menu inicial, loja, coleção/conquistas, tutorial guiado e modo foto. |
+| `SaveSystem.js` | Carrega e salva o estado em `localStorage`, com estado padrão, **migração de versão de save** e tolerância a falhas (modo privado, cota cheia, JSON corrompido). |
+| `Sound.js` | Áudio leve via WebAudio (sem dependências): blips de clique/coleta/nível e um pad ambiente. `AudioContext` criado sob demanda no primeiro gesto. |
+| `Achievements.js` | Lista declarativa de conquistas, cada uma com um `check(state, ctx)`. |
+| `Upgrades.js` | Definições da loja: upgrades, moeda, custo progressivo e efeito por nível. |
 
 ### `src/scenes/`
 | Arquivo | Responsabilidade |
@@ -66,18 +70,21 @@ A separação entre **lógica de jogo** (`game/`) e **mundo 3D** (`scenes/`,
 Sistemas visuais reutilizáveis, independentes do cenário específico:
 | Arquivo | Responsabilidade |
 |---|---|
-| `SkyDome.js` | Cúpula do céu com lua, estrelas e aurora. |
-| `ParticleField.js` | Campo de partículas mágicas flutuantes. |
-| `FlowerField.js` | As 7 espécies de flores e suas posições (usadas também pelas abelhas). |
+| `SkyDome.js` | Cúpula do céu com gradiente, sol, lua, estrelas, aurora, nuvens e colinas distantes. |
+| `ParticleField.js` | Campo de partículas mágicas flutuantes (camadas de poeira + brilho). |
+| `FlowerField.js` | Flor central (herói) + prado de fundo; expõe as posições das flores (usadas pelas abelhas). |
+| `FlowerSpecies.js` | Construtores 3D low-poly das 7 espécies, com cache de geometria de pétala. |
+| `textures.js` | Texturas procedurais de canvas compartilhadas (brilho, disco, nuvem), geradas uma vez e cacheadas. |
 
 ### `src/world/`
 Elementos do ambiente/cenário:
 | Arquivo | Responsabilidade |
 |---|---|
-| `DayNightCycle.js` | Ciclo dia/noite: anima cores, luz do sol e fog. |
-| `GrassField.js` | Grama via `InstancedMesh` (1 draw call para milhares de tufos). |
-| `TreeField.js` | Árvores estilizadas com folhagem em camadas. |
-| `Pond.js` | Lagoa com superfície animada. |
+| `DayNightCycle.js` | Ciclo dia/noite: anima cores, luz do sol/lua e fog a partir de keyframes. |
+| `Terrain.js` | Relevo do solo (campo de altura `terrainHeight(x,z)`), cobertura instanciada e a bacia carvada da lagoa. Base sobre a qual os demais sistemas se apoiam. |
+| `GrassField.js` | Grama via `InstancedMesh` (1 draw call para milhares de tufos), com vento animado no vertex shader (GPU). |
+| `TreeField.js` | Árvores estilizadas com folhagem em camadas e *fade* de segurança quando passam na frente da flor. |
+| `Pond.js` | Lagoa com superfície animada, margens (rochas/juncos) e vitórias-régias. |
 | `PetalParticles.js` | Pétalas caindo pelo jardim. |
 
 ### `src/entities/`
@@ -88,6 +95,7 @@ Criaturas e objetos animados:
 | `Bee.js` | Abelhas em rota Bézier entre as posições das flores. |
 | `Mushroom.js` | Cogumelos com material emissivo pulsante. |
 | `Firefly.js` | Vagalumes noturnos renderizados como *sprites* aditivos (sem `PointLight` por vagalume, por performance). |
+| `PowerUp.js` | Power-ups clicáveis que surgem no jardim (borboleta, chuva, cogumelo, vagalumes), com cooldown de spawn e expiração. |
 | `Rock.js` | Pedras decorativas espalhadas pelo cenário. |
 
 ---

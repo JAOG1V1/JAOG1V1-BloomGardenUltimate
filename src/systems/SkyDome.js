@@ -21,6 +21,13 @@ export class SkyDome {
     this._horizonColor = new THREE.Color(0x9fb8e0);
     this._nightF       = 0;
 
+    // Reusable colours for setSkyPhase (runs every frame) — avoids allocating a
+    // handful of THREE.Color objects per frame just to recolour sky/clouds.
+    this._warmColor   = new THREE.Color(0xffb066); // sunrise/sunset warm tint
+    this._cloudWhite  = new THREE.Color(0xffffff);
+    this._cloudNight  = new THREE.Color(0x2a3458);
+    this._cloudTint   = new THREE.Color();
+
     this._buildSky();
     this._buildHills();
     this._buildClouds();
@@ -297,7 +304,7 @@ export class SkyDome {
     // Warm the horizon a touch toward sunrise/sunset (mid lightness, warm hues).
     const warmF = Math.max(0, 1 - Math.abs(l - 0.42) / 0.2) * (h < 0.18 || h > 0.66 ? 1 : 0.25);
     if (warmF > 0) {
-      this._horizonColor.lerp(new THREE.Color(0xffb066), warmF * 0.5);
+      this._horizonColor.lerp(this._warmColor, warmF * 0.5);
     }
 
     // Stars + moon + aurora at night.
@@ -308,8 +315,8 @@ export class SkyDome {
     this.bands.forEach(b => { b.mesh.material.opacity = b.baseOpacity * nightF; });
 
     // Clouds: tinted toward the horizon colour, brighter by day, dim at night.
-    const cloudTint = this._horizonColor.clone().lerp(new THREE.Color(0xffffff), 0.42 * (1 - nightF));
-    cloudTint.lerp(new THREE.Color(0x2a3458), nightF * 0.7);
+    const cloudTint = this._cloudTint.copy(this._horizonColor).lerp(this._cloudWhite, 0.42 * (1 - nightF));
+    cloudTint.lerp(this._cloudNight, nightF * 0.7);
     const cloudVis = 1 - nightF * 0.7;
     this.clouds.forEach(c => {
       c.mat.color.copy(cloudTint);
