@@ -48,6 +48,13 @@ export class BeeField {
     this._bees = [];
     this._flowers = flowerPositions;
 
+    // Scratch vectors reused every frame so the flight path math allocates
+    // nothing inside the animation loop (no per-frame GC pressure).
+    this._mid  = new THREE.Vector3();
+    this._pos  = new THREE.Vector3();
+    this._prev = new THREE.Vector3();
+    this._dir  = new THREE.Vector3();
+
     for (let i = 0; i < count; i++) {
       const scale = 0.8 + Math.random() * 0.4;
       const { group, leftWing, rightWing } = buildBee(scale);
@@ -88,12 +95,11 @@ export class BeeField {
       const dst = this._flowers[b.dstIdx];
       const p = b.progress;
 
-      // Quadratic Bezier with arc
-      const mid = new THREE.Vector3()
-        .addVectors(src, dst).multiplyScalar(0.5);
+      // Quadratic Bezier with arc (reuses scratch vectors — no allocations)
+      const mid = this._mid.addVectors(src, dst).multiplyScalar(0.5);
       mid.y += 2.5;
 
-      const pos = new THREE.Vector3(
+      const pos = this._pos.set(
         (1 - p) * (1 - p) * src.x + 2 * (1 - p) * p * mid.x + p * p * dst.x,
         (1 - p) * (1 - p) * (src.y + b.yOff) + 2 * (1 - p) * p * mid.y + p * p * (dst.y + b.yOff),
         (1 - p) * (1 - p) * src.z + 2 * (1 - p) * p * mid.z + p * p * dst.z,
@@ -102,12 +108,12 @@ export class BeeField {
       // Face direction of travel
       if (b.progress > 0.01) {
         const pp = b.progress - 0.01;
-        const prevPos = new THREE.Vector3(
+        const prevPos = this._prev.set(
           (1 - pp) * (1 - pp) * src.x + 2 * (1 - pp) * pp * mid.x + pp * pp * dst.x,
           0,
           (1 - pp) * (1 - pp) * src.z + 2 * (1 - pp) * pp * mid.z + pp * pp * dst.z,
         );
-        const dir = pos.clone().sub(prevPos);
+        const dir = this._dir.subVectors(pos, prevPos);
         if (dir.length() > 0.0001) b.group.rotation.y = Math.atan2(dir.x, dir.z);
       }
 

@@ -46,6 +46,11 @@ export class FlowerField {
     this.flowers.push(main);
     this.mainFlower = main;
 
+    // Capture the hero flower's true petal colours so the click "rainbow" burst
+    // can fade back to them instead of freezing on a random hue when it ends.
+    this._heroPetalBase = main.petalMeshes.map(m => m.material.color.clone());
+    this._heroRainbow   = new THREE.Color();
+
     // ── Background meadow ─────────────────────────────────────────────────────
     this._placeMeadow();
 
@@ -240,9 +245,16 @@ export class FlowerField {
     this.mainFlower.head.rotation.y = Math.sin(t * 0.6) * 0.12;
 
     if (burst > 0) {
+      // Cycle the petals through a rainbow at the peak of the burst, then fade
+      // the tint out together with the burst so they settle back to their real
+      // colours instead of freezing on a random hue once clicking stops.
       const hue = (t * 0.5) % 1;
-      this.mainFlower.petalMeshes.forEach(m => m.material.color.setHSL(hue, 0.95, 0.65));
+      this._heroRainbow.setHSL(hue, 0.95, 0.65);
       this._burst = Math.max(0, burst - 0.04);
+      const k = this._burst; // 1 → 0 as the burst decays (0 = original colour)
+      this.mainFlower.petalMeshes.forEach((m, i) => {
+        m.material.color.copy(this._heroPetalBase[i]).lerp(this._heroRainbow, k);
+      });
     }
 
     const pulse = 0.36 + Math.sin(t * 2.4) * 0.1 + burst * 0.4;

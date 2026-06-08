@@ -275,7 +275,9 @@ export class GardenScene {
 
   /** Main render loop update */
   update(time) {
-    const delta = time - this._lastTime;
+    // Cap the delta so a backgrounded tab (where requestAnimationFrame pauses)
+    // doesn't produce one huge frame that jumps the day/night cycle on return.
+    const delta = Math.min(time - this._lastTime, 100);
     this._lastTime = time;
 
     // Day/night (pass raw ms delta so speed is frame-rate independent)

@@ -117,9 +117,13 @@ clique → ENERGIA → SEIVA → NÍVEL
 | Ação | Como fazer |
 |---|---|
 | Energizar flor | Clique / toque na flor central |
+| Coletar power-up | Clique / toque no item brilhante que aparece no jardim |
+| Girar a câmera | Arraste com o mouse / dedo (a órbita automática pausa e retoma sozinha) |
+| Zoom | Roda do mouse / pinça com dois dedos |
+| Loja & Coleção | Botões 🛒 e 📖 (canto superior direito) |
 | Alternar Dia / Noite | Botão 🌙 (canto superior direito) |
+| Som ligado / desligado | Botão 🔊 (canto superior direito) |
 | Modo Foto (esconde HUD) | Botão 📷 (canto superior direito) — `Esc` para sair |
-| Câmera girando | Automática (órbita lenta) |
 
 ---
 
@@ -185,9 +189,11 @@ bloom-garden-ultimate/
 ├── index.html
 ├── package.json
 ├── vite.config.js
+├── start.sh / start.bat     # Scripts de início rápido (Mac/Linux e Windows)
 ├── LICENSE                  # Licença MIT
 ├── DESENVOLVIMENTO.md       # Guia de arquitetura e desenvolvimento
 ├── assets/                  # Imagens do README (screenshots / GIFs)
+├── public/                  # Favicons, ícones PWA e site.webmanifest
 ├── .github/
 │   ├── CONTRIBUTING.md      # Guia de contribuição
 │   ├── PULL_REQUEST_TEMPLATE.md
@@ -199,18 +205,24 @@ bloom-garden-ultimate/
     ├── styles/
     │   └── style.css        # Tema mágico com Quicksand + Cinzel + glassmorphism
     ├── game/
-    │   ├── Game.js          # Loop principal e orquestração
-    │   ├── UI.js            # HUD, modo foto, toggle dia/noite
-    │   └── SaveSystem.js    # Save/load via localStorage
+    │   ├── Game.js          # Loop principal, economia, combo, power-ups e orquestração
+    │   ├── UI.js            # HUD, menu, loja, coleção, tutorial e modo foto
+    │   ├── SaveSystem.js    # Save/load via localStorage (com migração de versão)
+    │   ├── Sound.js         # Áudio WebAudio sintetizado (cliques, ambiente)
+    │   ├── Achievements.js  # Definições das conquistas
+    │   └── Upgrades.js      # Definições da loja (upgrades e custos)
     ├── scenes/
     │   └── GardenScene.js   # Cena Three.js — integra todos os sistemas
     ├── systems/
     │   ├── SkyDome.js       # Cúpula do céu com lua, estrelas e aurora
     │   ├── ParticleField.js # Campo de partículas mágicas
-    │   └── FlowerField.js   # 7 espécies de flores (rosa, tulipa, girassol…)
+    │   ├── FlowerField.js   # Flor central + prado de fundo (posições p/ abelhas)
+    │   ├── FlowerSpecies.js # Construtores 3D das 7 espécies de flores
+    │   └── textures.js      # Texturas procedurais compartilhadas (cache)
     ├── world/
     │   ├── DayNightCycle.js # Ciclo dia/noite com luzes e cores animadas
-    │   ├── GrassField.js    # Grama instanciada (InstancedMesh)
+    │   ├── Terrain.js       # Relevo do solo + cobertura instanciada + bacia da lagoa
+    │   ├── GrassField.js    # Grama instanciada (InstancedMesh) com vento na GPU
     │   ├── TreeField.js     # Árvores estilizadas com folhagem em camadas
     │   ├── Pond.js          # Lagoa com ondulações animadas
     │   └── PetalParticles.js# Pétalas caindo
@@ -219,8 +231,12 @@ bloom-garden-ultimate/
         ├── Bee.js           # Abelhas com rota Bézier entre flores
         ├── Mushroom.js      # Cogumelos com emissivo pulsante
         ├── Firefly.js       # Vagalumes noturnos (sprites aditivos)
+        ├── PowerUp.js       # Power-ups clicáveis que surgem no jardim
         └── Rock.js          # Pedras decorativas
 ```
+
+> 🧱 A pasta `docs/` (não listada acima) é **saída do build** publicada no GitHub
+> Pages — gerada por `npm run build` e versionada automaticamente pelo workflow.
 
 > 📖 Para entender a arquitetura em profundidade, leia o
 > **[DESENVOLVIMENTO.md](./DESENVOLVIMENTO.md)**.
