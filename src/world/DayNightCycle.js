@@ -21,7 +21,8 @@ const PHASES = [
 
 function lerpNum(a, b, t) { return a + (b - a) * t; }
 
-function samplePhases(dayT) {
+// Exported (pure) so it can be unit-tested without a WebGL context.
+export function samplePhases(dayT) {
   // Find surrounding keyframes
   let a = PHASES[0], b = PHASES[PHASES.length - 1];
   for (let i = 0; i < PHASES.length - 1; i++) {

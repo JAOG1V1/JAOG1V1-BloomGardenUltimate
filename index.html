@@ -24,7 +24,11 @@
   </head>
   <body>
     <div id="app">
-      <canvas id="scene"></canvas>
+      <canvas
+        id="scene"
+        tabindex="-1"
+        aria-label="Jardim 3D interativo. Pressione Espaço ou Enter para energizar a flor central."
+      ></canvas>
 
       <!-- ── Loading indicator (covers black canvas while the 3D scene builds) ── -->
       <div class="loading-overlay" id="loading-overlay" role="status" aria-live="polite" hidden>
@@ -95,12 +99,12 @@
 
         <!-- ── Action buttons ── -->
         <div class="action-buttons" id="action-buttons">
-          <button class="action-btn glass" id="btn-help" title="Como Jogar">❔</button>
-          <button class="action-btn glass" id="btn-shop" title="Loja / Upgrades">🛒</button>
-          <button class="action-btn glass" id="btn-collection" title="Coleção & Conquistas">📖</button>
-          <button class="action-btn glass" id="btn-day-night" title="Alternar Dia/Noite">🌙</button>
-          <button class="action-btn glass" id="btn-sound" title="Som ligado/desligado">🔊</button>
-          <button class="action-btn glass" id="btn-photo" title="Modo Foto">📷</button>
+          <button class="action-btn glass" id="btn-help" title="Como Jogar" aria-label="Como jogar">❔</button>
+          <button class="action-btn glass" id="btn-shop" title="Loja / Upgrades" aria-label="Loja e upgrades">🛒</button>
+          <button class="action-btn glass" id="btn-collection" title="Coleção & Conquistas" aria-label="Coleção e conquistas">📖</button>
+          <button class="action-btn glass" id="btn-day-night" title="Alternar Dia/Noite" aria-label="Alternar dia e noite">🌙</button>
+          <button class="action-btn glass" id="btn-sound" title="Som ligado/desligado" aria-label="Ligar ou desligar o som">🔊</button>
+          <button class="action-btn glass" id="btn-photo" title="Modo Foto" aria-label="Modo foto">📷</button>
         </div>
 
         <!-- ── Bottom message ── -->

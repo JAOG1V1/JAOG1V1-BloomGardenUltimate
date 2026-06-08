@@ -152,6 +152,16 @@ export class Game {
       if (moved <= 8 && dt <= 400) this._onPointer(e); // genuine tap
     });
 
+    // Keyboard accessibility: Space/Enter energizes the flower, as long as the
+    // player isn't in a menu/panel or focused on a UI control.
+    this._onKey = (e) => {
+      if (e.key !== " " && e.key !== "Enter" && e.code !== "Space") return;
+      if (!this._running || !this._ui.isGameplayFocus()) return;
+      e.preventDefault();
+      this._energizeFlower(window.innerWidth / 2, window.innerHeight / 2);
+    };
+    document.addEventListener("keydown", this._onKey);
+
     // Action buttons
     this._ui.bindDayNightToggle(() => { if (this._scene) this._scene.toggleDayNight(); });
     this._ui.bindShopButton(() => this._openShop());
@@ -169,6 +179,10 @@ export class Game {
     this._ui.setInGame(true);
     this._ui.setLoadingVisible(false);
     this._ui.fade(false);
+
+    // Move focus off the (now hidden) menu button onto the garden so the
+    // keyboard (Space/Enter) energizes the flower right away.
+    if (this._canvas.focus) this._canvas.focus({ preventScroll: true });
 
     // Welcome toast only AFTER entering (never on the menu).
     this._ui.toast("🌸 Bem-vindo ao seu jardim!");
@@ -344,7 +358,17 @@ export class Game {
       return;
     }
 
-    // Flower click
+    // Flower click → same path as the keyboard (Space/Enter).
+    this._energizeFlower(e.clientX, e.clientY);
+  }
+
+  /**
+   * Energize the hero flower: visual burst + economy (energy, score, combo).
+   * Shared by pointer taps and the keyboard. `sx/sy` is where the "+N" pops.
+   */
+  _energizeFlower(sx, sy) {
+    if (!this._scene) return;
+    this._scene.energize();
     this._registerCombo();
     const s = this._state;
     const energyGain = ENERGY_CLICK * (this._fx.butterfly > 0 ? 2 : 1);
@@ -356,7 +380,7 @@ export class Game {
     const gain = Math.round(base * this._comboMult);
     s.score += gain;
 
-    this._ui.floatText(e.clientX, e.clientY, `+${gain}`, this._comboMult > 1 ? "combo" : "");
+    this._ui.floatText(sx, sy, `+${gain}`, this._comboMult > 1 ? "combo" : "");
     this._ui.setHUD(s, this._levelProgress());
     this._sound.click();
     this._checkAchievements();
@@ -542,6 +566,7 @@ export class Game {
   destroy() {
     this._running = false;
     this._save.save(this._state);
+    if (this._onKey) document.removeEventListener("keydown", this._onKey);
     if (this._resizeObserver) this._resizeObserver.disconnect();
     if (this._scene) this._scene.dispose();
     this._scene = null;
