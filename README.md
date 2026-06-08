@@ -58,12 +58,17 @@ bonitas no **Modo Foto**.
 
 ## 📸 Screenshots
 
-> 💡 As imagens ainda não foram adicionadas. Coloque suas capturas em
-> [`assets/`](./assets/) com os nomes abaixo (veja [assets/README.md](./assets/README.md))
-> e elas aparecerão automaticamente aqui.
+> 💡 **Capturas ainda não adicionadas.** A melhor forma de ver o jogo é
+> [jogar agora no navegador](https://JAOG1V1.github.io/JAOG1V1-BloomGardenUltimate/).
+> Para ilustrar este README, gere as imagens com o **Modo Foto** (📷) e salve-as
+> em [`assets/`](./assets/) — os nomes esperados e as instruções estão em
+> [assets/README.md](./assets/README.md). Depois, descomente as linhas abaixo:
 
+<!--
 ![Gameplay](./assets/screenshot.png)
 ![Jardim à noite](./assets/screenshot-night.png)
+-->
+
 
 ---
 
@@ -174,9 +179,14 @@ npm run preview
 
 Este projeto é publicado pelo workflow `.github/workflows/deploy.yml`, que a cada push em `main`:
 
-1. Roda `npm run build` (saída em `docs/`).
-2. Faz commit de `docs/` de volta na branch.
-3. Publica `docs/` no GitHub Pages via `actions/deploy-pages`.
+1. Instala dependências (`npm ci`) e roda os testes (`npm test`).
+2. Roda `npm run build` (saída em `docs/`, incluindo `.nojekyll`).
+3. Publica `docs/` no GitHub Pages como **artefato** via `actions/deploy-pages`
+   (Pages configurado como *source: GitHub Actions* — a saída de build **não** é
+   versionada no repositório).
+
+> O workflow `.github/workflows/ci.yml` também roda testes + build em cada Pull
+> Request, pegando regressões antes do merge.
 
 Acesse em: **https://JAOG1V1.github.io/JAOG1V1-BloomGardenUltimate/**
 
@@ -193,12 +203,14 @@ bloom-garden-ultimate/
 ├── LICENSE                  # Licença MIT
 ├── DESENVOLVIMENTO.md       # Guia de arquitetura e desenvolvimento
 ├── assets/                  # Imagens do README (screenshots / GIFs)
-├── public/                  # Favicons, ícones PWA e site.webmanifest
+├── public/                  # Favicons, ícones PWA, site.webmanifest e sw.js (offline)
+├── test/                    # Testes unitários (Vitest) da lógica pura
 ├── .github/
 │   ├── CONTRIBUTING.md      # Guia de contribuição
 │   ├── PULL_REQUEST_TEMPLATE.md
 │   ├── ISSUE_TEMPLATE/      # Templates de bug e sugestão
 │   └── workflows/
+│       ├── ci.yml           # Testes + build em cada Pull Request
 │       └── deploy.yml       # Build + deploy no GitHub Pages
 └── src/
     ├── main.js              # Ponto de entrada
@@ -235,8 +247,9 @@ bloom-garden-ultimate/
         └── Rock.js          # Pedras decorativas
 ```
 
-> 🧱 A pasta `docs/` (não listada acima) é **saída do build** publicada no GitHub
-> Pages — gerada por `npm run build` e versionada automaticamente pelo workflow.
+> 🧱 A pasta `docs/` (não listada acima) é **saída do build** — gerada por
+> `npm run build` e publicada no GitHub Pages pelo workflow. Ela é
+> **ignorada pelo git** (`.gitignore`); o deploy a reconstrói a cada push.
 
 > 📖 Para entender a arquitetura em profundidade, leia o
 > **[DESENVOLVIMENTO.md](./DESENVOLVIMENTO.md)**.
@@ -256,15 +269,21 @@ bloom-garden-ultimate/
 
 ## 🗺️ Roadmap / próximos passos
 
-Ideias e melhorias futuras (contribuições são bem-vindas!):
+Já entregue ✅:
+
+- [x] 🎵 Som ambiente e efeitos sonoros suaves (WebAudio).
+- [x] 🏆 Conquistas, missões e coleção de espécies.
+- [x] 🛒 Loja de upgrades, combo e power-ups.
+- [x] ♿ Acessibilidade: teclado (Espaço/Enter), foco nos modais, `prefers-reduced-motion`, rótulos ARIA.
+- [x] ⚡ Desempenho adaptativo (ajuste automático de qualidade por FPS) + modo econômico.
+- [x] 📱 PWA instalável e jogável **offline** (service worker).
+
+Próximas ideias (contribuições são bem-vindas!):
 
 - [ ] 📸 Adicionar capturas de tela e um GIF de gameplay ao README.
 - [ ] 🌺 Novas espécies de flores e criaturas (libélulas, joaninhas).
-- [ ] 🎵 Trilha sonora ambiente e efeitos sonoros suaves.
 - [ ] 🌧️ Eventos de clima (chuva leve, arco-íris após a chuva).
-- [ ] 🏆 Conquistas/marcos por nível alcançado.
 - [ ] 🎨 Mais opções no Modo Foto (filtros, enquadramentos).
-- [ ] ♿ Melhorias de acessibilidade e opções de desempenho.
 
 ---
 

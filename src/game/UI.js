@@ -160,14 +160,64 @@ export class UI {
   }
 
   openPanel(name) {
+    this._panelOpener = document.activeElement;
     this.panelOverlay.hidden = false;
     this.panelOverlay.querySelectorAll(".panel").forEach(p => {
       p.hidden = p.dataset.panel !== name;
     });
+    // Keyboard accessibility: trap focus inside the open panel and move focus to
+    // it, so Tab cycles within the dialog instead of leaking to the page behind.
+    const active = this.panelOverlay.querySelector(`.panel[data-panel="${name}"]`);
+    if (active) {
+      this._trapFocus(active);
+      const target = active.querySelector(".panel-close") || active;
+      target.focus?.({ preventScroll: true });
+    }
   }
 
   closePanel() {
     this.panelOverlay.hidden = true;
+    this._releaseTrap();
+    // Return focus to whatever opened the panel (button in the HUD/menu).
+    if (this._panelOpener && this._panelOpener.focus) {
+      this._panelOpener.focus({ preventScroll: true });
+    }
+    this._panelOpener = null;
+  }
+
+  /** True when a Space/Enter press should energize the flower (not drive UI). */
+  isGameplayFocus() {
+    if (!this.panelOverlay.hidden) return false;
+    if (this.menuOverlay.style.display !== "none") return false;
+    const tut = $("tutorial-overlay");
+    if (tut && !tut.hidden) return false;
+    const a = document.activeElement;
+    if (a && ["BUTTON", "INPUT", "TEXTAREA", "SELECT", "A"].includes(a.tagName)) return false;
+    return true;
+  }
+
+  /** Keep Tab focus within `container` until released. */
+  _trapFocus(container) {
+    this._releaseTrap();
+    this._trapHandler = (e) => {
+      if (e.key !== "Tab") return;
+      const focusable = Array.from(container.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )).filter(el => !el.disabled && el.offsetParent !== null);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", this._trapHandler, true);
+  }
+
+  _releaseTrap() {
+    if (this._trapHandler) {
+      document.removeEventListener("keydown", this._trapHandler, true);
+      this._trapHandler = null;
+    }
   }
 
   // ── HUD ──────────────────────────────────────────────────────────────────
@@ -364,5 +414,6 @@ export class UI {
 
     render();
     overlay.hidden = false;
+    nextBtn.focus?.({ preventScroll: true });
   }
 }

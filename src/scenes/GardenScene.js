@@ -218,6 +218,55 @@ export class GardenScene {
     this.composer.addPass(new OutputPass());
     this.composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.composer.setSize(window.innerWidth, window.innerHeight);
+
+    // ── Dynamic quality ───────────────────────────────────────────────────────
+    // A watchdog measures the framerate and steps quality DOWN (never up, to
+    // avoid flapping) if it stays low, protecting weak devices: lower pixel
+    // ratio → drop the colour grade → finally dim/disable bloom. The manual
+    // "Qualidade reduzida" setting (lowQuality) starts a couple of steps in.
+    this._dprCap   = Math.min(window.devicePixelRatio, 2);
+    this._bloomBoost = 0;
+    this._qLevel   = 0;
+    this._qMax     = 3;
+    this._fpsAccum = 0;
+    this._fpsFrames = 0;
+    this._qCooldown = 2500; // ms of warm-up before the first measurement window
+    if (lowQuality) this._applyQualityLevel(2);
+
+    // ── Accessibility: respect the OS "reduce motion" preference ──────────────
+    // Stop the constant idle camera orbit for users who asked for less motion.
+    this._reducedMotion = !!(window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    if (this._reducedMotion) this.controls.autoRotate = false;
+  }
+
+  /** Pixel ratio for the current dynamic-quality level. */
+  _prForLevel() {
+    const caps = [this._dprCap, Math.min(this._dprCap, 1.5), Math.min(this._dprCap, 1.25), 1];
+    return caps[this._qLevel] || 1;
+  }
+
+  /** Recompute bloom strength from the decor upgrade + current quality level. */
+  _recomputeBloom() {
+    if (!this.bloomPass) return;
+    const base = this.isMobile ? 0.42 : 0.6;
+    const dim  = this._qLevel >= 2 ? 0.6 : 1.0; // dim before fully disabling
+    this.bloomPass.strength = base * dim + this._bloomBoost * 0.1;
+  }
+
+  /** Apply a dynamic-quality level (0 = best … 3 = lightest). */
+  _applyQualityLevel(level) {
+    this._qLevel = Math.max(0, Math.min(this._qMax, level));
+    const pr = this._prForLevel();
+    this.renderer.setPixelRatio(pr);
+    if (this.composer) {
+      this.composer.setPixelRatio(pr);
+      this.composer.setSize(window.innerWidth, window.innerHeight);
+    }
+    if (this.bloomPass) this.bloomPass.setSize(window.innerWidth, window.innerHeight);
+    if (this.colorGradePass) this.colorGradePass.enabled = this._qLevel < 2;
+    if (this.bloomPass) this.bloomPass.enabled = this._qLevel < 3;
+    this._recomputeBloom();
   }
 
   /**
@@ -239,7 +288,8 @@ export class GardenScene {
     });
     const hits = this.raycaster.intersectObjects(targets, false);
     if (hits.length > 0) {
-      this.flowers.energize();
+      // The burst is triggered by Game._energizeFlower so the click and the
+      // keyboard (Space/Enter) paths share exactly the same feedback.
       return { type: "flower" };
     }
     return null;
@@ -247,10 +297,8 @@ export class GardenScene {
 
   /** Adjust bloom strength (used by the "Decoração Mágica" upgrade). */
   setBloomBoost(level) {
-    if (this.bloomPass) {
-      const base = this.isMobile ? 0.42 : 0.6;
-      this.bloomPass.strength = base + level * 0.1;
-    }
+    this._bloomBoost = level || 0;
+    this._recomputeBloom();
   }
 
   /** Manually toggle day/night */
@@ -308,9 +356,26 @@ export class GardenScene {
     this.fireflies.update(time);
     this.bees.update(time);
 
+    // Framerate watchdog: if the average frame stays slow, drop one quality
+    // level (monotonic — never raises again, to avoid visible flapping).
+    this._qCooldown -= delta;
+    if (this._qCooldown <= 0 && this._qLevel < this._qMax) {
+      this._fpsAccum += delta; // delta is already capped at 100 ms
+      if (++this._fpsFrames >= 60) {
+        const avgMs = this._fpsAccum / this._fpsFrames;
+        if (avgMs > 22) { // sustained < ~45 fps → lighten the load
+          this._applyQualityLevel(this._qLevel + 1);
+          this._qCooldown = 3000; // let it settle before measuring again
+        }
+        this._fpsAccum = 0;
+        this._fpsFrames = 0;
+      }
+    }
+
     // Camera: OrbitControls handles user drag/zoom with damping. When the
-    // player has been idle past the threshold, re-enable the gentle auto orbit.
-    if (!this._interacting && !this.controls.autoRotate &&
+    // player has been idle past the threshold, re-enable the gentle auto orbit
+    // (unless the user prefers reduced motion).
+    if (!this._reducedMotion && !this._interacting && !this.controls.autoRotate &&
         (time - this._lastInteract) > this._idleDelay * 1000) {
       this.controls.autoRotate = true;
     }
@@ -328,8 +393,10 @@ export class GardenScene {
   resize(w, h) {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    // Re-apply pixel ratio so moving between displays (different DPR) stays crisp.
-    const pr = Math.min(window.devicePixelRatio, 2);
+    // Re-apply the pixel ratio for the current quality level (keeps any dynamic
+    // downshift in effect when moving between displays / rotating the device).
+    this._dprCap = Math.min(window.devicePixelRatio, 2);
+    const pr = this._prForLevel();
     this.renderer.setPixelRatio(pr);
     this.renderer.setSize(w, h);
     if (this.composer) {

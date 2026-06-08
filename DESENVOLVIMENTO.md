@@ -135,15 +135,26 @@ Sistemas visuais mais amplos (ex.: clima, chuva, arco-íris) vão em `src/system
 - **Build**: `npm run build` executa o Vite, que empacota `src/` e gera a saída em
   **`docs/`** (configurado em `vite.config.js` via `build.outDir: "docs"`). A opção
   `base` aponta para `"/JAOG1V1-BloomGardenUltimate/"`, necessária para os caminhos
-  funcionarem no GitHub Pages.
+  funcionarem no GitHub Pages. O `.nojekyll` vem de `public/` (sempre presente na saída).
+- **Testes**: `npm test` roda o **Vitest** sobre a lógica pura (economia/loja,
+  conquistas, migração de save, terreno, ciclo dia/noite) em `test/`. Use
+  `npm run test:watch` durante o desenvolvimento.
+- **CI**: `.github/workflows/ci.yml` roda **testes + build** em cada Pull Request
+  e push em `main`, pegando regressões antes do deploy.
 - **Deploy**: o workflow `.github/workflows/deploy.yml` roda a cada push em `main`:
-  1. `npm ci` e `npm run build` (saída em `docs/`).
-  2. Cria `docs/.nojekyll` e faz commit de `docs/` se houver mudanças.
-  3. Publica `docs/` no GitHub Pages com `actions/deploy-pages`.
+  `npm ci` → `npm test` → `npm run build` → publica `docs/` como **artefato** com
+  `actions/deploy-pages` (Pages como *source: GitHub Actions*).
 
-> ⚠️ **Nunca** edite ou versione documentação dentro de `docs/`: a pasta é
-> **saída do build** e é sobrescrita a cada deploy. Documentos ficam na raiz
-> (como este arquivo) ou em `.github/`.
+> ⚠️ A pasta `docs/` é **saída do build** e é **ignorada pelo git** (`.gitignore`):
+> nunca a edite à mão nem a versione — o deploy a reconstrói a cada push. Documentos
+> ficam na raiz (como este arquivo) ou em `.github/`.
+
+### Service worker / offline
+
+`public/sw.js` é um service worker sem dependências, registrado por `main.js`
+**apenas em produção**. Navegações usam *network-first* (para receber novos
+deploys) e os assets com hash usam *cache-first* (imutáveis), tornando o jogo
+instalável e jogável offline após a primeira visita.
 
 ---
 
