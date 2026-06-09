@@ -8,17 +8,22 @@ import { OrbitControls }  from "three/examples/jsm/controls/OrbitControls.js";
 import { SkyDome }        from "../systems/SkyDome.js";
 import { ParticleField }  from "../systems/ParticleField.js";
 import { FlowerField }    from "../systems/FlowerField.js";
+import { skyEnvEquirectTexture } from "../systems/textures.js";
 import { DayNightCycle }  from "../world/DayNightCycle.js";
 import { Terrain, POND }   from "../world/Terrain.js";
 import { GrassField }     from "../world/GrassField.js";
 import { TreeField }      from "../world/TreeField.js";
 import { Pond }           from "../world/Pond.js";
 import { PetalParticles } from "../world/PetalParticles.js";
+import { Weather }        from "../world/Weather.js";
 import { ButterflyField } from "../entities/Butterfly.js";
+import { DragonflyField } from "../entities/Dragonfly.js";
 import { MushroomField }  from "../entities/Mushroom.js";
 import { FireflyField }   from "../entities/Firefly.js";
 import { BeeField }       from "../entities/Bee.js";
 import { RockField }      from "../entities/Rock.js";
+import { BirdField }      from "../entities/Bird.js";
+import { LadybugField }   from "../entities/Ladybug.js";
 import { PowerUpField }    from "../entities/PowerUp.js";
 
 /**
@@ -32,8 +37,8 @@ export class GardenScene {
     const smallScreen = Math.min(window.innerWidth, window.innerHeight) < 760;
     this.isMobile = coarse || smallScreen || lowQuality;
     const q = this.isMobile
-      ? { grass: 1100, petals: 40, particles: 170, fireflies: 7, mushrooms: 8, rocks: 8, butterflies: 5, trees: 6, shadows: false }
-      : { grass: 2800, petals: 100, particles: 420, fireflies: 12, mushrooms: 12, rocks: 14, butterflies: 8, trees: 8, shadows: true };
+      ? { grass: 1100, petals: 40, particles: 170, fireflies: 7, mushrooms: 8, rocks: 8, butterflies: 5, dragonflies: 4, birds: 3, ladybugs: 5, trees: 6, shadows: false }
+      : { grass: 2800, petals: 100, particles: 420, fireflies: 12, mushrooms: 12, rocks: 14, butterflies: 8, dragonflies: 6, birds: 4, ladybugs: 7, trees: 8, shadows: true };
     this._q = q;
 
     // ── Renderer ────────────────────────────────────────────────────────────
@@ -56,6 +61,16 @@ export class GardenScene {
     // around the distant hills so they remain visible instead of being washed
     // into a milky haze. Colour is driven per-frame by DayNightCycle.
     this.scene.fog = new THREE.Fog(0x9fb8e0, 55, 165);
+
+    // ── Environment map (IBL) ────────────────────────────────────────────────
+    // A soft sky gradient gives the water its reflection and every PBR material
+    // a coherent sheen. Generated once; the scene dials environmentIntensity
+    // down at night (see update) so midnight never mirrors a bright daytime sky.
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this._envRT = pmrem.fromEquirectangular(skyEnvEquirectTexture());
+    this.scene.environment = this._envRT.texture;
+    if ("environmentIntensity" in this.scene) this.scene.environmentIntensity = 0.85;
+    pmrem.dispose();
 
     // ── Camera ───────────────────────────────────────────────────────────────
     this.camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 220);
@@ -104,6 +119,9 @@ export class GardenScene {
     this.mushrooms   = new MushroomField(this.scene, q.mushrooms);
     this.rocks       = new RockField(this.scene, q.rocks);
     this.butterflies = new ButterflyField(this.scene, q.butterflies);
+    this.dragonflies = new DragonflyField(this.scene, q.dragonflies);
+    this.birds       = new BirdField(this.scene, q.birds);
+    this.ladybugs    = new LadybugField(this.scene, q.ladybugs);
 
     // Fireflies (visible at night) — sprite-based, no per-firefly lights
     this.fireflies = new FireflyField(this.scene, q.fireflies);
@@ -238,6 +256,20 @@ export class GardenScene {
     this._reducedMotion = !!(window.matchMedia &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     if (this._reducedMotion) this.controls.autoRotate = false;
+
+    // ── Wind gusts ────────────────────────────────────────────────────────────
+    // Occasional stronger wind that leans the grass and pushes the petals — a
+    // gentle eased pulse, then back to calm.
+    this._gust = 0;
+    this._gusting = false;
+    this._gustTimer = 4 + Math.random() * 5;
+    this._gustT = 0;
+    this._gustDur = 1;
+    this._gustPeak = 0;
+
+    // Weather (occasional rain → rainbow). Desktop tier only, and skipped for
+    // reduced-motion, so weak devices and motion-sensitive users never see it.
+    this.weather = (!this.isMobile && !this._reducedMotion) ? new Weather(this.scene) : null;
   }
 
   /** Pixel ratio for the current dynamic-quality level. */
@@ -331,6 +363,20 @@ export class GardenScene {
     // Day/night (pass raw ms delta so speed is frame-rate independent)
     this.dayNight.update(delta);
 
+    // Environment reflections + colour grade follow the time of day.
+    const night = this.dayNight.nightFactor;
+    if ("environmentIntensity" in this.scene) {
+      this.scene.environmentIntensity = 0.85 - night * 0.6; // 0.85 day → 0.25 night
+    }
+    if (this.colorGradePass && this.colorGradePass.enabled) {
+      const u = this.colorGradePass.uniforms;
+      const g = this.isMobile ? 0.5 : 1.0;
+      u.uSaturation.value = 1.0 + (0.12 - night * 0.05) * g;
+      u.uWarm.value       = (0.05 - night * 0.11) * g; // warm by day, cool at night
+      u.uVignette.value   = (0.32 + night * 0.13) * g;
+      u.uBright.value     = 1.0 + (0.02 - night * 0.05) * g;
+    }
+
     // Update firefly night factor
     this.fireflies.setNightFactor(this.dayNight.nightFactor);
 
@@ -344,6 +390,31 @@ export class GardenScene {
     this.particles.update(time);
     this.flowers.update(time);
 
+    // Wind gusts → grass lean + petal push.
+    const wdt = delta / 1000;
+    this._gustTimer -= wdt;
+    if (!this._gusting && this._gustTimer <= 0) {
+      this._gusting = true;
+      this._gustT = 0;
+      this._gustDur = 1.4 + Math.random() * 1.8;
+      this._gustPeak = 0.55 + Math.random() * 0.5;
+      this._gustTimer = 7 + Math.random() * 11;
+    }
+    if (this._gusting) {
+      this._gustT += wdt;
+      const f = this._gustT / this._gustDur;
+      if (f >= 1) { this._gusting = false; this._gust = 0; }
+      else this._gust = Math.sin(f * Math.PI) * this._gustPeak;
+    }
+    this.grass.setGust(this._gust);
+    this.petals.setWind(this._gust);
+
+    // Weather (rain → rainbow), desktop tier only.
+    if (this.weather) {
+      this.weather.setNightFactor(night);
+      this.weather.update(time, wdt);
+    }
+
     // World
     this.grass.update(time);
     this.trees.update(time);
@@ -353,6 +424,9 @@ export class GardenScene {
     // Entities
     this.mushrooms.update(time);
     this.butterflies.update(time);
+    this.dragonflies.update(time);
+    this.birds.update(time);
+    this.ladybugs.update(time);
     this.fireflies.update(time);
     this.bees.update(time);
 
@@ -424,6 +498,9 @@ export class GardenScene {
         mat.dispose();
       }
     });
+
+    this.scene.environment = null;
+    if (this._envRT) this._envRT.dispose();
 
     this.scene.clear();
     if (this.composer) this.composer.dispose();

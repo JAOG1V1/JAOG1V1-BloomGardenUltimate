@@ -79,6 +79,9 @@ bonitas no **Modo Foto**.
 | 🌸 **Flores variadas** | Rosa, girassol, tulipa, margarida, lótus e mais (7 espécies) |
 | 🦋 **Borboletas** | Borboletas coloridas com trajetórias em figura-8 e batida de asas |
 | 🐝 **Abelhas** | 6 abelhas que coletam pólen em rotas Bézier entre flores |
+| 🪰 **Libélulas** | Libélulas iridescentes que pairam e dão "dardos" sobre a lagoa |
+| 🐦 **Pássaros** | Silhuetas planando em círculos lentos no alto do céu |
+| 🐞 **Joaninhas** | Joaninhas que rastejam pelo gramado seguindo o relevo |
 | 🍄 **Cogumelos mágicos** | Cogumelos brilhantes com material emissivo pulsante |
 | ✨ **Vagalumes** | Vagalumes que aparecem à noite com brilho suave |
 | 🌳 **Árvores estilizadas** | Árvores com folhagem em camadas que balança no vento |
@@ -88,6 +91,10 @@ bonitas no **Modo Foto**.
 | 🌸 **Pétalas caindo** | Pétalas coloridas derivando pelo jardim |
 | 🌅 **Ciclo dia/noite** | Transição completa: amanhecer → meio-dia → pôr do sol → noite estrelada |
 | 🌙 **Lua e estrelas** | Aparecem progressivamente durante a noite |
+| 🌠 **Estrelas cadentes** | Riscos de luz que cruzam o céu noturno de vez em quando |
+| 🌈 **Chuva & arco-íris** | Chuva leve ocasional seguida de arco-íris (no desktop) |
+| 💧 **Reflexos (IBL)** | Mapa de ambiente do céu reflete na água e dá brilho aos materiais |
+| 🍃 **Rajadas de vento** | Vento que inclina a grama e leva as pétalas |
 | 🌫️ **Neblina** | Fog suave para profundidade e atmosfera |
 
 > 🔧 As quantidades de grama, criaturas e partículas se ajustam automaticamente
@@ -237,10 +244,14 @@ bloom-garden-ultimate/
     │   ├── GrassField.js    # Grama instanciada (InstancedMesh) com vento na GPU
     │   ├── TreeField.js     # Árvores estilizadas com folhagem em camadas
     │   ├── Pond.js          # Lagoa com ondulações animadas
-    │   └── PetalParticles.js# Pétalas caindo
+    │   ├── PetalParticles.js# Pétalas caindo
+    │   └── Weather.js       # Clima ocasional: chuva + arco-íris (tier desktop)
     └── entities/
         ├── Butterfly.js     # Borboletas com trajetória figura-8
         ├── Bee.js           # Abelhas com rota Bézier entre flores
+        ├── Dragonfly.js     # Libélulas que pairam e dão dardos sobre a lagoa
+        ├── Bird.js          # Pássaros planando ao longe no céu
+        ├── Ladybug.js       # Joaninhas que rastejam pelo relevo do gramado
         ├── Mushroom.js      # Cogumelos com emissivo pulsante
         ├── Firefly.js       # Vagalumes noturnos (sprites aditivos)
         ├── PowerUp.js       # Power-ups clicáveis que surgem no jardim

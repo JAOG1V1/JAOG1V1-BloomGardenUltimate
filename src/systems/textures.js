@@ -8,6 +8,7 @@ import * as THREE from "three";
 let _softCircle = null;
 let _glowDisc = null;
 let _cloud = null;
+let _skyEnv = null;
 
 /**
  * A soft, radial circular sprite — used to replace the default square GL points
@@ -95,4 +96,33 @@ export function cloudTexture() {
   _cloud = new THREE.CanvasTexture(canvas);
   _cloud.colorSpace = THREE.SRGBColorSpace;
   return _cloud;
+}
+
+/**
+ * A soft equirectangular sky gradient used to build the scene's environment map
+ * (IBL). It is intentionally a calm, neutral daytime gradient — zenith blue →
+ * warm horizon → soft green ground — so it adds gentle sky-tinted reflections to
+ * the water and a coherent sheen to every PBR material, without trying to match
+ * the live sky (the day/night lights already handle colour; the scene only dials
+ * its environmentIntensity down at night).
+ */
+export function skyEnvEquirectTexture() {
+  if (_skyEnv) return _skyEnv;
+  const w = 256, h = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0.0, "#274a8c");  // zenith
+  g.addColorStop(0.45, "#9fc2ef"); // upper sky
+  g.addColorStop(0.5, "#dfe9f5");  // horizon haze
+  g.addColorStop(0.55, "#cdd8c2"); // just below horizon
+  g.addColorStop(1.0, "#3c5a39");  // ground bounce
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  _skyEnv = new THREE.CanvasTexture(canvas);
+  _skyEnv.colorSpace = THREE.SRGBColorSpace;
+  _skyEnv.mapping = THREE.EquirectangularReflectionMapping;
+  return _skyEnv;
 }

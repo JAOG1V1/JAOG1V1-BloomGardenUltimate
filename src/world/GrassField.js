@@ -13,12 +13,15 @@ export class GrassField {
 
     const geo = makeBladeGeometry(0.07, 0.55, 4);
 
-    // Wind uniform shared with the patched standard material.
+    // Wind uniforms shared with the patched standard material. uGust (0..1) is
+    // driven from the scene so passing gusts visibly lean and ripple the grass.
     this._uTime = { value: 0 };
+    this._uGust = { value: 0 };
     const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, side: THREE.DoubleSide });
     mat.onBeforeCompile = (shader) => {
       shader.uniforms.uTime = this._uTime;
-      shader.vertexShader = "uniform float uTime;\n" + shader.vertexShader.replace(
+      shader.uniforms.uGust = this._uGust;
+      shader.vertexShader = "uniform float uTime;\nuniform float uGust;\n" + shader.vertexShader.replace(
         "#include <begin_vertex>",
         `#include <begin_vertex>
          // Bend the blade more toward the tip (vertex height), driven by world XZ.
@@ -26,8 +29,11 @@ export class GrassField {
          float bendK = position.y * position.y * 1.4;
          float w = sin(uTime * 1.6 + wPos.x * 0.5 + wPos.z * 0.35);
          float w2 = sin(uTime * 2.3 + wPos.z * 0.6);
-         transformed.x += w * bendK * 0.5;
-         transformed.z += w2 * bendK * 0.3;`
+         float gust = 1.0 + uGust * 1.4;
+         transformed.x += w * bendK * 0.5 * gust;
+         transformed.z += w2 * bendK * 0.3 * gust;
+         // A passing gust also leans the whole blade one way.
+         transformed.x += uGust * bendK * 0.9;`
       );
     };
 
@@ -74,6 +80,11 @@ export class GrassField {
 
   update(time) {
     this._uTime.value = time * 0.001;
+  }
+
+  /** Set the current gust strength (0..1), driven by the scene's wind. */
+  setGust(g) {
+    this._uGust.value = g;
   }
 }
 
