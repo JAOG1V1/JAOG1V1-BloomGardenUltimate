@@ -8,6 +8,7 @@ import { OrbitControls }  from "three/examples/jsm/controls/OrbitControls.js";
 import { SkyDome }        from "../systems/SkyDome.js";
 import { ParticleField }  from "../systems/ParticleField.js";
 import { FlowerField }    from "../systems/FlowerField.js";
+import { skyEnvEquirectTexture } from "../systems/textures.js";
 import { DayNightCycle }  from "../world/DayNightCycle.js";
 import { Terrain, POND }   from "../world/Terrain.js";
 import { GrassField }     from "../world/GrassField.js";
@@ -56,6 +57,16 @@ export class GardenScene {
     // around the distant hills so they remain visible instead of being washed
     // into a milky haze. Colour is driven per-frame by DayNightCycle.
     this.scene.fog = new THREE.Fog(0x9fb8e0, 55, 165);
+
+    // ── Environment map (IBL) ────────────────────────────────────────────────
+    // A soft sky gradient gives the water its reflection and every PBR material
+    // a coherent sheen. Generated once; the scene dials environmentIntensity
+    // down at night (see update) so midnight never mirrors a bright daytime sky.
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this._envRT = pmrem.fromEquirectangular(skyEnvEquirectTexture());
+    this.scene.environment = this._envRT.texture;
+    if ("environmentIntensity" in this.scene) this.scene.environmentIntensity = 0.85;
+    pmrem.dispose();
 
     // ── Camera ───────────────────────────────────────────────────────────────
     this.camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 220);
@@ -331,6 +342,20 @@ export class GardenScene {
     // Day/night (pass raw ms delta so speed is frame-rate independent)
     this.dayNight.update(delta);
 
+    // Environment reflections + colour grade follow the time of day.
+    const night = this.dayNight.nightFactor;
+    if ("environmentIntensity" in this.scene) {
+      this.scene.environmentIntensity = 0.85 - night * 0.6; // 0.85 day → 0.25 night
+    }
+    if (this.colorGradePass && this.colorGradePass.enabled) {
+      const u = this.colorGradePass.uniforms;
+      const g = this.isMobile ? 0.5 : 1.0;
+      u.uSaturation.value = 1.0 + (0.12 - night * 0.05) * g;
+      u.uWarm.value       = (0.05 - night * 0.11) * g; // warm by day, cool at night
+      u.uVignette.value   = (0.32 + night * 0.13) * g;
+      u.uBright.value     = 1.0 + (0.02 - night * 0.05) * g;
+    }
+
     // Update firefly night factor
     this.fireflies.setNightFactor(this.dayNight.nightFactor);
 
@@ -424,6 +449,9 @@ export class GardenScene {
         mat.dispose();
       }
     });
+
+    this.scene.environment = null;
+    if (this._envRT) this._envRT.dispose();
 
     this.scene.clear();
     if (this.composer) this.composer.dispose();

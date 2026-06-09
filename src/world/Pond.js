@@ -35,6 +35,7 @@ export class Pond {
       opacity: 0.86,
       reflectivity: 0.85,
       ior: 1.33,
+      envMapIntensity: 1.35, // mirror the scene environment (sky) for a livelier surface
       emissive: new THREE.Color(0x06304f),
       emissiveIntensity: 0.08,
       side: THREE.DoubleSide,
