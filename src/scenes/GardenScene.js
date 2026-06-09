@@ -21,6 +21,8 @@ import { MushroomField }  from "../entities/Mushroom.js";
 import { FireflyField }   from "../entities/Firefly.js";
 import { BeeField }       from "../entities/Bee.js";
 import { RockField }      from "../entities/Rock.js";
+import { BirdField }      from "../entities/Bird.js";
+import { LadybugField }   from "../entities/Ladybug.js";
 import { PowerUpField }    from "../entities/PowerUp.js";
 
 /**
@@ -34,8 +36,8 @@ export class GardenScene {
     const smallScreen = Math.min(window.innerWidth, window.innerHeight) < 760;
     this.isMobile = coarse || smallScreen || lowQuality;
     const q = this.isMobile
-      ? { grass: 1100, petals: 40, particles: 170, fireflies: 7, mushrooms: 8, rocks: 8, butterflies: 5, dragonflies: 4, trees: 6, shadows: false }
-      : { grass: 2800, petals: 100, particles: 420, fireflies: 12, mushrooms: 12, rocks: 14, butterflies: 8, dragonflies: 6, trees: 8, shadows: true };
+      ? { grass: 1100, petals: 40, particles: 170, fireflies: 7, mushrooms: 8, rocks: 8, butterflies: 5, dragonflies: 4, birds: 3, ladybugs: 5, trees: 6, shadows: false }
+      : { grass: 2800, petals: 100, particles: 420, fireflies: 12, mushrooms: 12, rocks: 14, butterflies: 8, dragonflies: 6, birds: 4, ladybugs: 7, trees: 8, shadows: true };
     this._q = q;
 
     // ── Renderer ────────────────────────────────────────────────────────────
@@ -117,6 +119,8 @@ export class GardenScene {
     this.rocks       = new RockField(this.scene, q.rocks);
     this.butterflies = new ButterflyField(this.scene, q.butterflies);
     this.dragonflies = new DragonflyField(this.scene, q.dragonflies);
+    this.birds       = new BirdField(this.scene, q.birds);
+    this.ladybugs    = new LadybugField(this.scene, q.ladybugs);
 
     // Fireflies (visible at night) — sprite-based, no per-firefly lights
     this.fireflies = new FireflyField(this.scene, q.fireflies);
@@ -251,6 +255,16 @@ export class GardenScene {
     this._reducedMotion = !!(window.matchMedia &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     if (this._reducedMotion) this.controls.autoRotate = false;
+
+    // ── Wind gusts ────────────────────────────────────────────────────────────
+    // Occasional stronger wind that leans the grass and pushes the petals — a
+    // gentle eased pulse, then back to calm.
+    this._gust = 0;
+    this._gusting = false;
+    this._gustTimer = 4 + Math.random() * 5;
+    this._gustT = 0;
+    this._gustDur = 1;
+    this._gustPeak = 0;
   }
 
   /** Pixel ratio for the current dynamic-quality level. */
@@ -371,6 +385,25 @@ export class GardenScene {
     this.particles.update(time);
     this.flowers.update(time);
 
+    // Wind gusts → grass lean + petal push.
+    const wdt = delta / 1000;
+    this._gustTimer -= wdt;
+    if (!this._gusting && this._gustTimer <= 0) {
+      this._gusting = true;
+      this._gustT = 0;
+      this._gustDur = 1.4 + Math.random() * 1.8;
+      this._gustPeak = 0.55 + Math.random() * 0.5;
+      this._gustTimer = 7 + Math.random() * 11;
+    }
+    if (this._gusting) {
+      this._gustT += wdt;
+      const f = this._gustT / this._gustDur;
+      if (f >= 1) { this._gusting = false; this._gust = 0; }
+      else this._gust = Math.sin(f * Math.PI) * this._gustPeak;
+    }
+    this.grass.setGust(this._gust);
+    this.petals.setWind(this._gust);
+
     // World
     this.grass.update(time);
     this.trees.update(time);
@@ -381,6 +414,8 @@ export class GardenScene {
     this.mushrooms.update(time);
     this.butterflies.update(time);
     this.dragonflies.update(time);
+    this.birds.update(time);
+    this.ladybugs.update(time);
     this.fireflies.update(time);
     this.bees.update(time);
 

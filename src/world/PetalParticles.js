@@ -5,6 +5,7 @@ import { softCircleTexture } from "../systems/textures.js";
 export class PetalParticles {
   constructor(scene, count = 120) {
     this._count = count;
+    this._wind = 0; // lateral push from the scene's wind gusts
 
     const positions = new Float32Array(count * 3);
     const colors    = new Float32Array(count * 3);
@@ -63,10 +64,11 @@ export class PetalParticles {
     const pos = this._positions;
     const vel = this._vel;
 
+    const wind = this._wind;
     for (let i = 0; i < this._count; i++) {
-      pos[i * 3]     += vel[i * 3]     + Math.sin(t * 0.7 + i * 1.1) * 0.003;
+      pos[i * 3]     += vel[i * 3]     + Math.sin(t * 0.7 + i * 1.1) * 0.003 + wind * 0.05;
       pos[i * 3 + 1] += vel[i * 3 + 1];
-      pos[i * 3 + 2] += vel[i * 3 + 2] + Math.cos(t * 0.5 + i * 0.9) * 0.002;
+      pos[i * 3 + 2] += vel[i * 3 + 2] + Math.cos(t * 0.5 + i * 0.9) * 0.002 + wind * 0.015;
 
       // Reset when hitting ground
       if (pos[i * 3 + 1] < 0) {
@@ -77,5 +79,10 @@ export class PetalParticles {
     }
 
     this.points.geometry.attributes.position.needsUpdate = true;
+  }
+
+  /** Set the lateral wind push (0..1), driven by the scene's gusts. */
+  setWind(g) {
+    this._wind = g;
   }
 }
