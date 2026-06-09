@@ -85,7 +85,8 @@ Elementos do ambiente/cenário:
 | `GrassField.js` | Grama via `InstancedMesh` (1 draw call para milhares de tufos), com vento animado no vertex shader (GPU). |
 | `TreeField.js` | Árvores estilizadas com folhagem em camadas e *fade* de segurança quando passam na frente da flor. |
 | `Pond.js` | Lagoa com superfície animada, margens (rochas/juncos) e vitórias-régias. |
-| `PetalParticles.js` | Pétalas caindo pelo jardim. |
+| `PetalParticles.js` | Pétalas caindo pelo jardim (com empurrão lateral nas rajadas de vento). |
+| `Weather.js` | Clima ocasional: chuva leve (LineSegments) seguida de arco-íris. Criado só no tier desktop e ignorado em *reduced-motion*. |
 
 ### `src/entities/`
 Criaturas e objetos animados:
@@ -93,6 +94,9 @@ Criaturas e objetos animados:
 |---|---|
 | `Butterfly.js` | Borboletas com trajetória em figura-8 e batida de asas. |
 | `Bee.js` | Abelhas em rota Bézier entre as posições das flores. |
+| `Dragonfly.js` | Libélulas iridescentes que pairam e dão "dardos" sobre a lagoa/prado. |
+| `Bird.js` | Pássaros (silhuetas) planando em círculos lentos no alto do céu. |
+| `Ladybug.js` | Joaninhas que rastejam seguindo o relevo do terreno, longe da água. |
 | `Mushroom.js` | Cogumelos com material emissivo pulsante. |
 | `Firefly.js` | Vagalumes noturnos renderizados como *sprites* aditivos (sem `PointLight` por vagalume, por performance). |
 | `PowerUp.js` | Power-ups clicáveis que surgem no jardim (borboleta, chuva, cogumelo, vagalumes), com cooldown de spawn e expiração. |
