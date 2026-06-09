@@ -15,6 +15,7 @@ import { GrassField }     from "../world/GrassField.js";
 import { TreeField }      from "../world/TreeField.js";
 import { Pond }           from "../world/Pond.js";
 import { PetalParticles } from "../world/PetalParticles.js";
+import { Weather }        from "../world/Weather.js";
 import { ButterflyField } from "../entities/Butterfly.js";
 import { DragonflyField } from "../entities/Dragonfly.js";
 import { MushroomField }  from "../entities/Mushroom.js";
@@ -265,6 +266,10 @@ export class GardenScene {
     this._gustT = 0;
     this._gustDur = 1;
     this._gustPeak = 0;
+
+    // Weather (occasional rain → rainbow). Desktop tier only, and skipped for
+    // reduced-motion, so weak devices and motion-sensitive users never see it.
+    this.weather = (!this.isMobile && !this._reducedMotion) ? new Weather(this.scene) : null;
   }
 
   /** Pixel ratio for the current dynamic-quality level. */
@@ -403,6 +408,12 @@ export class GardenScene {
     }
     this.grass.setGust(this._gust);
     this.petals.setWind(this._gust);
+
+    // Weather (rain → rainbow), desktop tier only.
+    if (this.weather) {
+      this.weather.setNightFactor(night);
+      this.weather.update(time, wdt);
+    }
 
     // World
     this.grass.update(time);
