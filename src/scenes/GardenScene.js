@@ -16,6 +16,7 @@ import { TreeField }      from "../world/TreeField.js";
 import { Pond }           from "../world/Pond.js";
 import { PetalParticles } from "../world/PetalParticles.js";
 import { ButterflyField } from "../entities/Butterfly.js";
+import { DragonflyField } from "../entities/Dragonfly.js";
 import { MushroomField }  from "../entities/Mushroom.js";
 import { FireflyField }   from "../entities/Firefly.js";
 import { BeeField }       from "../entities/Bee.js";
@@ -33,8 +34,8 @@ export class GardenScene {
     const smallScreen = Math.min(window.innerWidth, window.innerHeight) < 760;
     this.isMobile = coarse || smallScreen || lowQuality;
     const q = this.isMobile
-      ? { grass: 1100, petals: 40, particles: 170, fireflies: 7, mushrooms: 8, rocks: 8, butterflies: 5, trees: 6, shadows: false }
-      : { grass: 2800, petals: 100, particles: 420, fireflies: 12, mushrooms: 12, rocks: 14, butterflies: 8, trees: 8, shadows: true };
+      ? { grass: 1100, petals: 40, particles: 170, fireflies: 7, mushrooms: 8, rocks: 8, butterflies: 5, dragonflies: 4, trees: 6, shadows: false }
+      : { grass: 2800, petals: 100, particles: 420, fireflies: 12, mushrooms: 12, rocks: 14, butterflies: 8, dragonflies: 6, trees: 8, shadows: true };
     this._q = q;
 
     // ── Renderer ────────────────────────────────────────────────────────────
@@ -115,6 +116,7 @@ export class GardenScene {
     this.mushrooms   = new MushroomField(this.scene, q.mushrooms);
     this.rocks       = new RockField(this.scene, q.rocks);
     this.butterflies = new ButterflyField(this.scene, q.butterflies);
+    this.dragonflies = new DragonflyField(this.scene, q.dragonflies);
 
     // Fireflies (visible at night) — sprite-based, no per-firefly lights
     this.fireflies = new FireflyField(this.scene, q.fireflies);
@@ -378,6 +380,7 @@ export class GardenScene {
     // Entities
     this.mushrooms.update(time);
     this.butterflies.update(time);
+    this.dragonflies.update(time);
     this.fireflies.update(time);
     this.bees.update(time);
 

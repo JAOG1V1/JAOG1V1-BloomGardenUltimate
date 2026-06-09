@@ -35,6 +35,8 @@ export class SkyDome {
     this._buildStars();
     this._buildMoon();
     this._buildAurora();
+    this._buildShootingStars();
+    this._lastT = 0;
 
     // Current phase (set by DayNightCycle)
     this._skyH = 0.63;
@@ -258,6 +260,57 @@ export class SkyDome {
     this.moon.add(this._moonGlow);
   }
 
+  // ── Shooting stars: brief additive streaks that cross the night sky ────────
+  _buildShootingStars() {
+    this._shoot = [];
+    this._shootTex = streakTexture();
+    this._shootCooldown = 3 + Math.random() * 6;
+    for (let i = 0; i < 3; i++) {
+      const mat = new THREE.MeshBasicMaterial({
+        map: this._shootTex, transparent: true, opacity: 0, depthWrite: false,
+        blending: THREE.AdditiveBlending, fog: false, side: THREE.DoubleSide,
+      });
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(9, 0.5), mat);
+      mesh.visible = false;
+      this.group.add(mesh);
+      this._shoot.push({ mesh, mat, t: 0, dur: 1, active: false, vx: 0, vy: 0 });
+    }
+  }
+
+  _spawnShootingStar() {
+    const s = this._shoot.find((x) => !x.active);
+    if (!s) return;
+    s.active = true;
+    s.t = 0;
+    s.dur = 0.9 + Math.random() * 0.6;
+    s.mesh.position.set((Math.random() - 0.5) * 90, 40 + Math.random() * 25, -55 - Math.random() * 20);
+    const ang = -0.5 - Math.random() * 0.8;           // downward diagonal
+    const speed = 50 + Math.random() * 30;
+    s.vx = Math.cos(ang) * speed * (Math.random() < 0.5 ? 1 : -1);
+    s.vy = Math.sin(ang) * speed;
+    s.mesh.rotation.z = Math.atan2(s.vy, s.vx);        // align the streak with travel
+    s.mesh.visible = true;
+  }
+
+  _updateShootingStars(dt) {
+    if (this._nightF > 0.55) {
+      this._shootCooldown -= dt;
+      if (this._shootCooldown <= 0) {
+        this._spawnShootingStar();
+        this._shootCooldown = 4 + Math.random() * 8;
+      }
+    }
+    for (const s of this._shoot) {
+      if (!s.active) continue;
+      s.t += dt;
+      const f = s.t / s.dur;
+      if (f >= 1) { s.active = false; s.mesh.visible = false; s.mat.opacity = 0; continue; }
+      s.mesh.position.x += s.vx * dt;
+      s.mesh.position.y += s.vy * dt;
+      s.mat.opacity = Math.sin(f * Math.PI) * this._nightF; // fade in then out
+    }
+  }
+
   _buildAurora() {
     this.bands = [];
     const bandColors = [0xff8ed8, 0x8bdcff, 0xd0a0ff, 0xffd166, 0xa8edea];
@@ -350,6 +403,10 @@ export class SkyDome {
   }
 
   update(time) {
+    const dt = this._lastT ? Math.min((time - this._lastT) / 1000, 0.1) : 0;
+    this._lastT = time;
+    this._updateShootingStars(dt);
+
     // Drift clouds slowly around the dome, gentle vertical bob.
     this.clouds.forEach(c => {
       c.angle += c.speed * 16;
@@ -367,4 +424,25 @@ export class SkyDome {
     this.stars.rotation.y = time * 0.000018;
     this.moon.rotation.y  = time * 0.00001;
   }
+}
+
+// A comet-tail streak texture: transparent tail → bright head (+X), cached once.
+let _streak = null;
+function streakTexture() {
+  if (_streak) return _streak;
+  const w = 256, h = 16;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  const g = ctx.createLinearGradient(0, 0, w, 0);
+  g.addColorStop(0.0, "rgba(255,255,255,0)");
+  g.addColorStop(0.72, "rgba(255,255,255,0.12)");
+  g.addColorStop(0.93, "rgba(255,255,255,0.95)");
+  g.addColorStop(1.0, "rgba(255,255,255,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  _streak = new THREE.CanvasTexture(canvas);
+  _streak.colorSpace = THREE.SRGBColorSpace;
+  return _streak;
 }
